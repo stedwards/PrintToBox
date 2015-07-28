@@ -49,7 +49,7 @@ Options:
 ```
 /usr/bin/PrintToBox -a <code> <username> <filename>
 ```
- * Assuming permissions and everything are correct, it will generate /var/cache/PrintToBox/tokens and upload the file
+ * Assuming permissions and everything are correct, it will generate `/var/cache/PrintToBox/tokens` and upload the file
  to the supplied user
  * If you're too slow, do steps 5-7 again
  
