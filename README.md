@@ -23,15 +23,18 @@ Options:
 ```
 
 ## Installation
+
 ### Building
 1. Download the git repository
 2. Run: `./gradlew uberjar`
+
 ### Installing the program
 1. Review install.sh
 2. `sudo ./install.sh`
 3. `sudo useradd -a -G printtobox <username>`
  * N.b., **anyone in this group can read the config file and alter the tokens file**. This is why it is a good idea to
  abstract access via CUPS. Making the executable setuid=root is *not* recommended.
+ 
 ### Box
 1. Create a service account with developer access
 2. Log into the service account in Box.com
@@ -49,6 +52,7 @@ Options:
  * Assuming permissions and everything are correct, it will generate /var/cache/PrintToBox/tokens and upload the file
  to the supplied user
  * If you're too slow, do steps 5-7 again
+ 
 ## Tea4CUPS
 Assuming you installed the PrintToBox shell script as /usr/bin/PrintToBox, you can edit the Tea4CUPS config file 
 (`/etc/cups/tea4cups.conf`), adding the following line for the printer you are configuring:
