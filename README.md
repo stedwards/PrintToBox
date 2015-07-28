@@ -54,8 +54,7 @@ Options:
  * If you're too slow, do steps 5-7 again
  
 ## Tea4CUPS
-Assuming you installed the PrintToBox shell script as /usr/bin/PrintToBox, you can edit the Tea4CUPS config file 
-(`/etc/cups/tea4cups.conf`), adding the following line for the printer you are configuring:
+Edit the Tea4CUPS config file, `/etc/cups/tea4cups.conf`, adding the following line for the printer you are configuring:
 ```
 [BOXPRINTER]
 prehook_0 : /usr/bin/PrintToBox $TEAUSERNAME $TEADATAFILE
