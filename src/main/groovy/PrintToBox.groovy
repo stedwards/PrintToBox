@@ -12,11 +12,6 @@ import java.nio.channels.FileLock
 import java.util.logging.Level
 import java.util.logging.Logger
 
-//FIXME: Documentation for installation
-//FIXME: Create an install script [?]
-//FIXME: Check into a git repo
-//FIXME: Get permission to open source
-
 final class PrintToBox {
     private static final String CONFIG_FILE = '/etc/PrintToBox.conf'
     private static final String TOKENS_FILE = '/var/cache/PrintToBox/tokens'
