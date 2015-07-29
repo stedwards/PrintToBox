@@ -6,6 +6,7 @@
 /bin/chgrp printtobox /var/cache/PrintToBox
 
 /bin/cp PrintToBox.conf /etc
+/bin/chgrp printtobox /etc/PrintToBox.conf
 /bin/chmod 0640 /etc/PrintToBox.conf
 
 /bin/mkdir -m '0755' /usr/lib/PrintToBox
