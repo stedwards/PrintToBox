@@ -34,6 +34,7 @@ Options:
 3. `sudo useradd -a -G printtobox <username>`
  * N.b., **anyone in this group can read the config file and alter the tokens file**. This is why it is a good idea to
  abstract access via CUPS. Making the executable setuid=root is *not* recommended.
+4. Edit/Review `/usr/lib/PrintToBox/PrintToBox.sh` for the proper `JAVA_HOME` path (Java 7+)
  
 ### Box
 1. Create a service account with developer access
