@@ -8,6 +8,7 @@ import com.box.sdk.BoxItem
 import com.box.sdk.BoxUser
 import groovy.json.JsonSlurper
 import groovy.json.JsonOutput
+import groovy.json.JsonParserType
 import java.nio.channels.FileLock
 import java.util.logging.Level
 import java.util.logging.Logger
@@ -57,7 +58,7 @@ the owner. Creates the folder if it doesn't exist.
             AUTH_CODE = cmdLineOpts.a
 
         try {
-            configOpts = jsonSlurper.parse(new File(CONFIG_FILE))
+            configOpts = jsonSlurper.setType(JsonParserType.LAX).parse(new File(CONFIG_FILE))
 
             assert configOpts.clientId instanceof String
             assert configOpts.clientSecret instanceof String
