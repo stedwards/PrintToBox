@@ -26,10 +26,10 @@ final class PrintToBox {
         def tokens
         FileLock tokensLock
         RandomAccessFile tokensRAF
+        String folderName
         String userName
         String fileName
         String AUTH_CODE = ''
-        String folderName = 'PrintToBox ' + userName
 
         // Turn off logging to prevent polluting the output.
         Logger.getLogger("com.box.sdk").setLevel(Level.OFF);
@@ -97,6 +97,8 @@ Optional keys:
             folderName = cmdLineOpts.f
         } else if (configOpts.baseFolderName) {
             folderName = configOpts.baseFolderName + ' ' + userName
+        } else {
+            folderName = 'PrintToBox ' + userName
         }
 
         try {
