@@ -21,9 +21,9 @@ final class PrintToBox {
         BoxAPIConnection api
         def cli
         def cmdLineOpts
-        def configOpts
+        def slurpOpts
+        def configOpts = [:]
         def tokens
-        def jsonSlurper = new JsonSlurper()
         FileLock tokensLock
         RandomAccessFile tokensRAF
         String userName
@@ -58,13 +58,16 @@ the owner. Creates the folder if it doesn't exist.
             AUTH_CODE = cmdLineOpts.a
 
         try {
-            configOpts = jsonSlurper.setType(JsonParserType.LAX).parse(new File(CONFIG_FILE))
+            //The LAX parser is the only one that supports comments (/* */) in JSON
+            //However, it returns a horrible map type. Convert it here to a normal Groovy map.
+            slurpOpts = new JsonSlurper().setType(JsonParserType.LAX).parse(new File(CONFIG_FILE))
+            slurpOpts.each {k, v -> configOpts.put(k, slurpOpts.get(k))}
 
             assert configOpts.clientId instanceof String
             assert configOpts.clientSecret instanceof String
             assert configOpts.enterpriseDomain instanceof String
-            assert (configOpts.tokensLockRetries == null || configOpts.tokensLockRetries instanceof Integer)
-            assert (configOpts.baseFolderName == null || configOpts.baseFolderName instanceof String)
+            assert (!configOpts.tokensLockRetries || configOpts.tokensLockRetries instanceof Integer)
+            assert (!configOpts.baseFolderName || configOpts.baseFolderName instanceof String)
 
         } catch (AssertionError e) {
             println('Error: Invalid config file: ' + """${CONFIG_FILE}
@@ -77,7 +80,7 @@ the owner. Creates the folder if it doesn't exist.
 
 Optional keys:
   "tokensLockRetries": 1000 (Default)
-  "baseFolderName": "PrintToBox"
+  "baseFolderName": "PrintToBox" (Default)
 """
             )
             return
@@ -87,12 +90,14 @@ Optional keys:
             return
         }
 
-        configOpts.tokensLockRetries = configOpts.tokensLockRetries ?: 1000
-        folderName = configOpts.baseFolderName ? configOpts.baseFolderName + ' ' + userName: folderName
+        if (!configOpts.tokensLockRetries)
+            configOpts.tokensLockRetries = 1000
 
-        if (cmdLineOpts.f)
+        if (cmdLineOpts.f) {
             folderName = cmdLineOpts.f
-
+        } else if (configOpts.baseFolderName) {
+            folderName = configOpts.baseFolderName + ' ' + userName
+        }
 
         try {
             tokensRAF = new RandomAccessFile(TOKENS_FILE, "rw");
@@ -122,7 +127,7 @@ Optional keys:
 
             int bytes_read = tokensRAF.read(buf, 0, tokensRAF.length().toInteger())
 
-            tokens = jsonSlurper.parse(buf)
+            tokens = new JsonSlurper().parse(buf)
 
             assert tokens.accessToken instanceof String
             assert tokens.refreshToken instanceof String
