@@ -145,7 +145,6 @@ Optional keys:
             return
         } catch (e) {
             // Do nothing, probably FileNotFound
-            println e.getClass().toString() + e.getStackTrace().toString() + e.getMessage() + ' ' + e.getCause().toString()
             tokens = [accessToken: null, refreshToken: null]
         }
 
