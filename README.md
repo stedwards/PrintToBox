@@ -66,5 +66,4 @@ Options:
         lpr -PBOXPRINTER testfile
         lpq -PBOXPRINTER
 
-Unfortunately, the CUPS job filename is what Tea4CUPS receives so you are stuck with that. E.g., tea4cups-BOXPRINTER-username-216.
-
+Unfortunately, the CUPS job filename is what Tea4CUPS receives so you are stuck with that. E.g., `tea4cups-BOXPRINTER-username-216`.
