@@ -56,9 +56,11 @@ Options:
  
 ## Tea4CUPS
 1. Add a printer. E.g., `sudo lpadmin -p 'BOXPRINTER' -E -v 'tea4cups://'`
-2. Edit the Tea4CUPS config file, `/etc/cups/tea4cups.conf`, adding the following lines for the printer you are configuring: ``` [BOXPRINTER]
+2. Edit the Tea4CUPS config file, `/etc/cups/tea4cups.conf`, adding the following lines for the printer you are configuring: ```
+[BOXPRINTER]
 prehook_0 : /usr/bin/PrintToBox $TEAUSERNAME $TEADATAFILE >>/var/log/PrintToBox.log 2>>/var/log/PrintToBox.err ``` 
-3. Test ```
+3. Test
+```
 lpr -PBOXPRINTER testfile
 lpq -PBOXPRINTER ```
 
