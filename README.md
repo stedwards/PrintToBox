@@ -55,10 +55,21 @@ Options:
  * If you're too slow, do steps 5-7 again
  
 ## Tea4CUPS
-Edit the Tea4CUPS config file, `/etc/cups/tea4cups.conf`, adding the following line for the printer you are configuring:
+1. Add a printer. E.g.,
+```
+sudo lpadmin -p 'BOXPRINTER' -E -v 'tea4cups://'
+```
+2. Edit the Tea4CUPS config file, `/etc/cups/tea4cups.conf`, adding the following line for the printer you are configuring:
 ```
 [BOXPRINTER]
-prehook_0 : /usr/bin/PrintToBox $TEAUSERNAME $TEADATAFILE
+prehook_0 : /usr/bin/PrintToBox $TEAUSERNAME $TEADATAFILE >>/var/log/PrintToBox.log 2>>/var/log/PrintToBox.err
 
 ```
-Unfortunately, the CUPS job filename is what Tea4CUPS receives so you are stuck with that.
+3. Test
+```
+lpr -PBOXPRINTER testfile
+lpq -PBOXPRINTER
+```
+
+Unfortunately, the CUPS job filename is what Tea4CUPS receives so you are stuck with that. E.g., tea4cups-BOXPRINTER-username-216.
+
