@@ -1,5 +1,10 @@
+plugins {
+  id "nebula.os-package" version "2.2.6"
+}
+
 apply plugin: 'groovy'
 apply plugin: 'application'
+apply plugin: 'os-package'
 version = '1.0'
 mainClassName='PrintToBox'
 
@@ -15,11 +20,38 @@ dependencies {
     testCompile group: 'junit', name: 'junit', version: '4.11'
 }
 
-task uberjar(type: Jar,dependsOn:[':compileJava',':compileGroovy']) {
-    from files(sourceSets.main.output.classesDir)
-    from configurations.runtime.asFileTree.files.collect { zipTree(it) }
+ospackage  {
+    release '1'
+    os = LINUX // only applied to RPM
 
-    manifest {
-        attributes 'Main-Class': mainClassName
+    //FIXME this needs to be moved to an installation script
+    // (ant won't work because it's a package...)
+//    /usr/sbin/groupadd -f printtobox
+//    /bin/mkdir -m '2770' /var/cache/PrintToBox
+//    /bin/chgrp printtobox /var/cache/PrintToBox
+
+    packageName = 'printtobox'
+    user 'root'
+    permissionGroup 'root'
+
+    from ('build/install/PrintToBox/lib') {
+        into '/usr/lib/PrintToBox/lib'
+        user 'root'
+        fileMode 0644
     }
+    from ('build/install/PrintToBox/bin') {
+        into '/usr/lib/PrintToBox/bin'
+        user 'root'
+        fileMode 0755
+    }
+    from ('PrintToBox.conf') {
+        into '/etc'
+        user 'root'
+        permissionGroup 'printtobox'
+        fileMode 0640
+    }
+
+    link('/usr/lib/PrintToBox/bin/PrintToBox', '/usr/bin/PrintToBox', 0777)
+
+
 }
