@@ -21,18 +21,18 @@ dependencies {
 }
 
 ospackage  {
-    release '1'
-    os = LINUX // only applied to RPM
-
-    //FIXME this needs to be moved to an installation script
-    // (ant won't work because it's a package...)
-//    /usr/sbin/groupadd -f printtobox
-//    /bin/mkdir -m '2770' /var/cache/PrintToBox
-//    /bin/chgrp printtobox /var/cache/PrintToBox
-
+    release = '1'
+    os = 'LINUX'
     packageName = 'printtobox'
-    user 'root'
-    permissionGroup 'root'
+    summary = 'Upload files for enterprise users to collaborated folders in Box.com'
+    packager = 'Stephen Olander-Waters <stephenw@stedwards.edu>'
+    maintainer = 'Stephen Olander-Waters <stephenw@stedwards.edu>'
+    url = 'https://github.com/StEdwardsTeam/PrintToBox'
+    license = 'MIT'
+    user = 'root'
+    permissionGroup = 'root'
+    preInstall = file('preInstall.sh')
+    postUninstall = file('postUninstall.sh')
 
     from ('build/install/PrintToBox/lib') {
         into '/usr/lib/PrintToBox/lib'
@@ -50,8 +50,15 @@ ospackage  {
         permissionGroup 'printtobox'
         fileMode 0640
     }
+}
 
-    link('/usr/lib/PrintToBox/bin/PrintToBox', '/usr/bin/PrintToBox', 0777)
+//FIXME debian running postUninstall script but not preinstall when
+// installing a package over itself
+//FIXME test RPM install / uninstall
 
+task createDeb(type: Deb, dependsOn: [installApp]) {
+    requires('openjdk-7-jre-headless | java7-runtime-headless | jre')
+}
 
+task createRpm(type: Rpm, dependsOn: [installApp]) {
 }

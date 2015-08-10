@@ -22,21 +22,19 @@ Options:
                   "PrintToBox <username>"
 ```
 
-## Installation
-
-### Building
+## Building and Installing
 1. Download the git repository
-2. Run: `./gradlew uberjar`
-
-### Installing the program
-1. Review install.sh
-2. `sudo ./install.sh`
-3. `sudo usermod -a -G printtobox <username>`
+2. Build a package
+   * RedHat/RPM distros: `./gradlew createRpm`
+   * Ubuntu/DEB distros: `./gradlew createDeb`
+3. Install the package
+   * RedHat/RPM distros: `sudo rpm -i build/distributions/printtobox-VERSION.rpm`
+   * Ubuntu/DEB distros: `sudo dpkg -i build/distributions/printtobox_VERSION.deb`
+4. `sudo usermod -a -G printtobox <username>`
  * N.b., **anyone in this group can read the config file and alter the tokens file**. This is why it is a good idea to
  abstract access via CUPS. Making the executable setuid=root is *not* recommended.
-4. Edit/Review `/usr/lib/PrintToBox/PrintToBox.sh` for the proper `JAVA_HOME` path (Java 7+)
  
-### Box
+## Setting up configuration with Box.com
 1. Create a service account with developer access
 2. Log into the service account in Box.com
 3. Create a new application
