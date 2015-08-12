@@ -1,11 +1,11 @@
-#!/bin/bash
+#!/bin/sh
 
-if [ -d  "/var/cache/PrintToBox" ] ; then
-    /bin/rm -rf /var/cache/PrintToBox
-fi
+set -e
+
+# if $1 not empty and equal to 1 (RPM) or contains "upgrade" (DEB) then
+# leave this alone!
+[ ! -z ${1+x} ] && [ "$1" = "1" ] || test "${1#*upgrade}" != "$1" && exit 0
 
 /bin/rm -f /usr/bin/PrintToBox
 
-if [ -n "`/usr/bin/getent group printtobox`" ] ; then
-    /usr/sbin/groupdel printtobox
-fi
+#Fedora forbids removing groups. Taking that advice.

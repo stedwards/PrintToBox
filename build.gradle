@@ -31,7 +31,9 @@ ospackage  {
     license = 'MIT'
     user = 'root'
     permissionGroup = 'root'
+    requires('coreutils')
     preInstall = file('preInstall.sh')
+    postInstall = file('postInstall.sh')
     postUninstall = file('postUninstall.sh')
 
     from ('build/install/PrintToBox/lib') {
@@ -45,20 +47,34 @@ ospackage  {
         fileMode 0755
     }
     from ('PrintToBox.conf') {
+        fileType CONFIG | NOREPLACE
         into '/etc'
         user 'root'
         permissionGroup 'printtobox'
         fileMode 0640
     }
+    from ('tokens') {
+        fileType CONFIG | NOREPLACE
+        into '/var/cache/PrintToBox'
+        user 'root'
+        permissionGroup 'printtobox'
+        fileMode 0660
+    }
+    from (['LICENSE','README.md']) {
+        into '/usr/share/doc/PrintToBox'
+        user 'root'
+        fileMode 0644
+    }
 }
 
-//FIXME debian running postUninstall script but not preinstall when
-// installing a package over itself
-//FIXME test RPM install / uninstall
-
 task createDeb(type: Deb, dependsOn: [installApp]) {
+    configurationFile('''/etc/PrintToBox.conf
+/var/cache/PrintToBox/tokens
+''')
     requires('openjdk-7-jre-headless | java7-runtime-headless | jre')
+    requires('passwd')
 }
 
 task createRpm(type: Rpm, dependsOn: [installApp]) {
+    requires('shadow-utils')
 }

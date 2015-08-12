@@ -1,10 +1,11 @@
-#!/bin/bash
+#!/bin/sh
 
-/usr/sbin/groupadd -f printtobox
+set -e
 
-if [ ! -d  "/var/cache/PrintToBox" ] ; then
-    /bin/mkdir -m '2770' /var/cache/PrintToBox
-    /bin/chgrp printtobox /var/cache/PrintToBox
-fi
+# if $1 not empty and equal to 2 (RPM) or contains "upgrade" (DEB) then
+# leave the configuration alone!
+[ ! -z ${1+x} ] && [ "$1" = "2" ] || test "${1#*upgrade}" != "$1" && exit 0
+
+/usr/sbin/groupadd -r -f printtobox
 
 /bin/ln -sf /usr/lib/PrintToBox/bin/PrintToBox /usr/bin/PrintToBox

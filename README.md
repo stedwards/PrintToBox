@@ -23,14 +23,15 @@ Options:
 ```
 
 ## Building and Installing
-1. Download the git repository
-2. Build a package
+1. Install Java 7+ and ensure `/usr/bin/java -version` or `JAVA_HOME` is set to it
+2. Download the git repository
+3. Build a package
    * RedHat/RPM distros: `./gradlew createRpm`
    * Ubuntu/DEB distros: `./gradlew createDeb`
-3. Install the package
+4. Install the package
    * RedHat/RPM distros: `sudo rpm -i build/distributions/printtobox-VERSION.rpm`
    * Ubuntu/DEB distros: `sudo dpkg -i build/distributions/printtobox_VERSION.deb`
-4. `sudo usermod -a -G printtobox <username>`
+5. `sudo usermod -a -G printtobox <username>`
  * N.b., **anyone in this group can read the config file and alter the tokens file**. This is why it is a good idea to
  abstract access via CUPS. Making the executable setuid=root is *not* recommended.
  
