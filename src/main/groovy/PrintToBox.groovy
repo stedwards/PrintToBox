@@ -74,7 +74,7 @@ the owner. Creates the folder if it doesn't exist.
             assert (!configOpts.baseFolderName || configOpts.baseFolderName instanceof String)
 
         } catch (AssertionError e) {
-            println('Error: Invalid config file: ' + """${CONFIG_FILE}
+            println 'Error: Invalid config file: ' + """${CONFIG_FILE}
 """ + 'Expected format (JSON):' + """
 {
   "enterpriseDomain": "@example.com",
@@ -84,13 +84,12 @@ the owner. Creates the folder if it doesn't exist.
 
 Optional keys:
   "tokensLockRetries": 1000 (Default)
-  "baseFolderName": "PrintToBox" (Default)
-"""
-            )
+  "baseFolderName": "PrintToBox" (Default)"""
+
             return
         } catch (e) {
-            println(e.toString())
-            println(e.getCause().toString())
+            println e.toString()
+            println e.getCause().toString()
             return
         }
 
@@ -138,14 +137,12 @@ Optional keys:
             assert tokens.accessToken instanceof String
             assert tokens.refreshToken instanceof String
         } catch (AssertionError e) {
-            println('Error: Invalid tokens file: ' + """${TOKENS_FILE}
+            println 'Error: Invalid tokens file: ' + """${TOKENS_FILE}
 """ + 'Expected format (JSON):' + """
 {
   "accessToken": "abcdefghijklmnopqrstuvwxyz123456",
   "refreshToken": "abcdefghijklmnopqrstuvwxyz123456"
-}
-"""
-            )
+}"""
             tokensLock.release()
             tokensRAF.close()
             return
@@ -157,7 +154,7 @@ Optional keys:
         try {
             fileStream = new FileInputStream(fileName)
         } catch (FileNotFoundException e) {
-            println(e.getMessage())
+            println e.getMessage()
             //If the tokens file is inaccessible due to permissions, these are null
             if (tokensLock != null) tokensLock.release();
             if (tokensRAF != null) tokensRAF.close()
@@ -165,10 +162,10 @@ Optional keys:
         }
 
         if (tokens.accessToken == null && tokens.refreshToken == null && AUTH_CODE.isEmpty()) {
-            println("""Error: Either '${TOKENS_FILE}' is inaccessible (file permissions)
+            println """Error: Either '${TOKENS_FILE}' is inaccessible (file permissions)
 or OAUTH2 is not set up. If the tokens file is accessible, either supply
 the authorization code from leg one of OAUTH2 or set up the tokens file
-manually.""")
+manually."""
             //If the tokens file is inaccessible due to permissions, these are null
             if (tokensLock != null) tokensLock.release();
             if (tokensRAF != null) tokensRAF.close();
@@ -182,11 +179,11 @@ manually.""")
                 api = new BoxAPIConnection(configOpts.clientId, configOpts.clientSecret, tokens.accessToken, tokens.refreshToken)
             }
         } catch (BoxAPIException e) {
-            println('''Could not connect to Box API. Usually, this means one of:
-1) /etc/PrintToBox.conf is not configured correctly
-2) /var/cache/PrintToBox/tokens has expired tokens and OAUTH2 leg 1 needs to be re-run
-''')
-            println(boxErrorMessage(e))
+            println """Error: Could not connect to Box API. Usually, this means one of:
+1) ${CONFIG_FILE} is not configured correctly
+2) ${TOKENS_FILE} has expired tokens and OAUTH2 leg 1 needs to be re-run
+"""
+            println boxErrorMessage(e)
 
             tokensLock.release()
             tokensRAF.close()
@@ -202,16 +199,17 @@ manually.""")
                 writeTokensToFile(tokensRAF, tokens);
 
         } catch (BoxAPIException e) {
-            println('Could not get new tokens for some reason. Here is the Box message:')
-            println(boxErrorMessage(e))
+            println """Error: Could not get new tokens. Most likely, ${TOKENS_FILE}
+has expired tokens and OAUTH2 leg 1 needs to be re-run"""
+            println boxErrorMessage(e)
 
             tokensLock.release()
             tokensRAF.close()
 
             return
         } catch (e) {
-            println('Error getting new tokens and writing them to disk')
-            println(e.toString())
+            println 'Error: Could not get new tokens and write them to disk'
+            println e.toString()
 
             tokensLock.release()
             tokensRAF.close()
@@ -224,8 +222,8 @@ manually.""")
             rootFolder = BoxFolder.getRootFolder(api)
 
         } catch (BoxAPIException e) {
-            println('Could not access the service account user via the API or get its root folder')
-            println(boxErrorMessage(e))
+            println 'Error: Could not access the service account user via the API or get its root folder'
+            println boxErrorMessage(e)
 
             tokensLock.release()
             tokensRAF.close()
@@ -236,16 +234,16 @@ manually.""")
         try {
             printFolder = getFolder(rootFolder, folderName)
         } catch (BoxAPIException e) {
-            println('Could not create or access the target folder')
-            println(boxErrorMessage(e))
+            println 'Error: Could not create or access the target folder'
+            println boxErrorMessage(e)
 
             tokensLock.release()
             tokensRAF.close()
 
             return
         } catch (e) {
-            println('Weird system error creating or accessing the target folder')
-            println(e.toString())
+            println 'Error: Could not create or access the target folder'
+            println e.toString()
             tokensLock.release()
             tokensRAF.close()
 
@@ -256,20 +254,19 @@ manually.""")
             setupCollaboration(printFolder, userInfo, userName + configOpts.enterpriseDomain)
 
         } catch (BoxAPIException e) {
-            println("""Could not properly set collaboration on the folder:
-1) Check that user '${userName}' exists
+            println """Error: Could not properly set collaboration on the folder:
+1) Check that user '${userName}' exists in Box.
 2) Check that enterpriseDomain '${configOpts.enterpriseDomain}' is correct
-3) Ensure the user does not have a folder '${printFolder.getInfo().getName()}' already
-""")
-            println(boxErrorMessage(e))
+3) Ensure the user does not have a folder '${printFolder.getInfo().getName()}' already"""
+            println boxErrorMessage(e)
 
             tokensLock.release()
             tokensRAF.close()
 
             return
         } catch (e) {
-            println('Weird system error setting the collaboration on the target folder')
-            println(e.toString())
+            println 'Error: Could not set the collaboration on the target folder'
+            println e.toString()
             tokensLock.release()
             tokensRAF.close()
 
@@ -280,11 +277,11 @@ manually.""")
             uploadFileToFolder(printFolder, fileStream, fileName)
 
         } catch (BoxAPIException e) {
-            println('Could not upload the file to the target folder')
-            println(boxErrorMessage(e))
+            println 'Error: Box API could not upload the file to the target folder'
+            println boxErrorMessage(e)
         } catch (e) {
-            println('Weird system error uploading the file to the target folder')
-            println(e.toString())
+            println 'Error: System could not upload the file to the target folder'
+            println e.toString()
         } finally {
             tokensLock.release()
             tokensRAF.close()
@@ -322,25 +319,16 @@ manually.""")
     }
 
     private static String boxErrorMessage(BoxAPIException boxAPIException) {
-        JsonSlurper jsonSlurper = new JsonSlurper()
-        println(boxAPIException.toString())
-
+        def retval = boxAPIException.toString()
         def resp = boxAPIException.getResponse()
 
         if (resp != null) {
-            def result = jsonSlurper.parseText(resp);
-
-            def retval = ''
-
-            if (result.type != null)
-                retval = result.type.capitalize() + ' ';
-
-            retval.concat(result.status + ': ' + result.message)
-
-            return retval
+            retval += "\n" + JsonOutput.prettyPrint(resp)
+        } else {
+            retval += "\n" + boxAPIException.getLocalizedMessage()
         }
 
-        return boxAPIException.getLocalizedMessage()
+        return retval
     }
 
     //The service account will use top-level folders
@@ -369,15 +357,30 @@ manually.""")
 
         //Check for existing collaboration
         for (BoxCollaboration.Info itemInfo : folder.getCollaborations()) {
-
             collaborations_exist = true
 
             BoxCollaborator.Info boxCollaboratorInfo = itemInfo.getAccessibleBy()
+            BoxUser.Info boxCreatorInfo = itemInfo.getCreatedBy()
             BoxCollaboration.Role boxCollaborationRole = itemInfo.getRole()
+            BoxCollaboration.Status boxCollaborationStatus = itemInfo.getStatus()
 
-            //Skip group collaborations
-            if (!(boxCollaboratorInfo instanceof BoxUser.Info))
-                continue;
+            //If pending collaboration, decide what to do
+            //Else, if not a user-type collaboration, skip it (not handling groups)
+            if (boxCollaborationStatus == BoxCollaboration.Status.PENDING &&
+                    boxCollaborationRole == BoxCollaboration.Role.EDITOR &&
+                    boxCreatorInfo.getID() == myId.getID() &&
+                    boxCollaboratorInfo == null
+            ) {
+                println """Warning: User '${userName}' does not appear to exist and the
+collaboration on folder '${folder.getInfo().getName()}' appears stuck
+in Pending status. The file is likely to be uploaded correctly but the
+usage will be charged to the service account and no other account may
+be able to view the folder."""
+                continue
+
+            } else if (!(boxCollaboratorInfo instanceof BoxUser.Info)) {
+                continue
+            }
 
             BoxUser.Info userInfo = (BoxUser.Info) boxCollaboratorInfo
 
