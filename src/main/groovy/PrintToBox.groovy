@@ -19,6 +19,10 @@ final class PrintToBox {
 
     static void main(String[] args) {
         BoxAPIConnection api
+        BoxUser.Info userInfo
+        BoxFolder rootFolder
+        BoxFolder printFolder
+        FileInputStream fileStream
         def cli
         def cmdLineOpts
         def slurpOpts
@@ -150,22 +154,24 @@ Optional keys:
             tokens = [accessToken: null, refreshToken: null]
         }
 
-        File file = new File(fileName)
-        FileInputStream fileStream
         try {
-            fileStream = new FileInputStream(file)
+            fileStream = new FileInputStream(fileName)
         } catch (FileNotFoundException e) {
             println(e.getMessage())
-            tokensLock.release()
-            tokensRAF.close()
+            //If the tokens file is inaccessible due to permissions, these are null
+            if (tokensLock != null) tokensLock.release();
+            if (tokensRAF != null) tokensRAF.close()
             return
         }
 
         if (tokens.accessToken == null && tokens.refreshToken == null && AUTH_CODE.isEmpty()) {
-            println 'Error: OAUTH2 is not set up. Either supply the authorization code from ' +
-                    'leg one of OAUTH2 or set up the tokens file manually.'
-            tokensLock.release()
-            tokensRAF.close()
+            println("""Error: Either '${TOKENS_FILE}' is inaccessible (file permissions)
+or OAUTH2 is not set up. If the tokens file is accessible, either supply
+the authorization code from leg one of OAUTH2 or set up the tokens file
+manually.""")
+            //If the tokens file is inaccessible due to permissions, these are null
+            if (tokensLock != null) tokensLock.release();
+            if (tokensRAF != null) tokensRAF.close();
             return
         }
 
@@ -175,29 +181,115 @@ Optional keys:
             } else {
                 api = new BoxAPIConnection(configOpts.clientId, configOpts.clientSecret, tokens.accessToken, tokens.refreshToken)
             }
+        } catch (BoxAPIException e) {
+            println('''Could not connect to Box API. Usually, this means one of:
+1) /etc/PrintToBox.conf is not configured correctly
+2) /var/cache/PrintToBox/tokens has expired tokens and OAUTH2 leg 1 needs to be re-run
+''')
+            println(boxErrorMessage(e))
+
+            tokensLock.release()
+            tokensRAF.close()
+
+            return
+        }
+
+        try {
             tokens.accessToken = api.getAccessToken()
             tokens.refreshToken = api.getRefreshToken()
 
             if (tokens.accessToken != null && tokens.refreshToken != null)
                 writeTokensToFile(tokensRAF, tokens);
 
-            BoxUser.Info userInfo = BoxUser.getCurrentUser(api).getInfo()
+        } catch (BoxAPIException e) {
+            println('Could not get new tokens for some reason. Here is the Box message:')
+            println(boxErrorMessage(e))
 
-            BoxFolder rootFolder = BoxFolder.getRootFolder(api)
+            tokensLock.release()
+            tokensRAF.close()
 
-            BoxFolder printFolder = getFolder(rootFolder, folderName)
+            return
+        } catch (e) {
+            println('Error getting new tokens and writing them to disk')
+            println(e.toString())
 
-            setupCollaboration(printFolder, userInfo, userName + configOpts.enterpriseDomain)
+            tokensLock.release()
+            tokensRAF.close()
 
-            uploadFileToFolder(printFolder, fileStream, file.name)
+            return
+        }
+
+        try {
+            userInfo = BoxUser.getCurrentUser(api).getInfo()
+            rootFolder = BoxFolder.getRootFolder(api)
 
         } catch (BoxAPIException e) {
+            println('Could not access the service account user via the API or get its root folder')
             println(boxErrorMessage(e))
+
+            tokensLock.release()
+            tokensRAF.close()
+
+            return
+        }
+
+        try {
+            printFolder = getFolder(rootFolder, folderName)
+        } catch (BoxAPIException e) {
+            println('Could not create or access the target folder')
+            println(boxErrorMessage(e))
+
+            tokensLock.release()
+            tokensRAF.close()
+
+            return
+        } catch (e) {
+            println('Weird system error creating or accessing the target folder')
+            println(e.toString())
+            tokensLock.release()
+            tokensRAF.close()
+
+            return
+        }
+
+        try {
+            setupCollaboration(printFolder, userInfo, userName + configOpts.enterpriseDomain)
+
+        } catch (BoxAPIException e) {
+            println("""Could not properly set collaboration on the folder:
+1) Check that user '${userName}' exists
+2) Check that enterpriseDomain '${configOpts.enterpriseDomain}' is correct
+3) Ensure the user does not have a folder '${printFolder.getInfo().getName()}' already
+""")
+            println(boxErrorMessage(e))
+
+            tokensLock.release()
+            tokensRAF.close()
+
+            return
+        } catch (e) {
+            println('Weird system error setting the collaboration on the target folder')
+            println(e.toString())
+            tokensLock.release()
+            tokensRAF.close()
+
+            return
+        }
+
+        try {
+            uploadFileToFolder(printFolder, fileStream, fileName)
+
+        } catch (BoxAPIException e) {
+            println('Could not upload the file to the target folder')
+            println(boxErrorMessage(e))
+        } catch (e) {
+            println('Weird system error uploading the file to the target folder')
+            println(e.toString())
         } finally {
             tokensLock.release()
             tokensRAF.close()
         }
-    }
+    } //end main()
 
     private static void uploadFileToFolder(BoxFolder folder, InputStream fileStream, String fileName) {
 
