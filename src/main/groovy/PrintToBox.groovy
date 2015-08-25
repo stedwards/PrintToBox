@@ -47,8 +47,9 @@ the owner. Creates the folder if it doesn't exist.
 
         cli.a(args: 1, argName:'auth_code', 'Auth code from OAUTH2 leg one')
         cli.f(args: 1, argName:'folder', 'Box folder name. Should be unique per user. Default: "PrintToBox <username>"')
-        cmdLineOpts = cli.parse(args)
+        cli._(longOpt:'no-update', 'If the filename already exists in Box, do nothing')
 
+        cmdLineOpts = cli.parse(args)
 
         if (cmdLineOpts.arguments().size() < 2) {
             cli.usage()
@@ -274,7 +275,7 @@ has expired tokens and OAUTH2 leg 1 needs to be re-run"""
         }
 
         try {
-            uploadFileToFolder(printFolder, fileStream, fileName)
+            uploadFileToFolder(printFolder, fileStream, fileName, cmdLineOpts)
 
         } catch (BoxAPIException e) {
             println 'Error: Box API could not upload the file to the target folder'
@@ -288,15 +289,15 @@ has expired tokens and OAUTH2 leg 1 needs to be re-run"""
         }
     } //end main()
 
-    private static void uploadFileToFolder(BoxFolder folder, InputStream fileStream, String fileName) {
+    private static void uploadFileToFolder(BoxFolder folder, InputStream fileStream, String fileName, cmdLineOpts) {
 
         // By definition, there is an explicit race condition on checking if a file exists and then
         // uploading afterward. This is how Box works. There is no way to atomically send a file
         // and have Box rename it automatically if there is a conflict.
         //
-        // Because this is a "printer", we make a best effort to get the file there.
-        //
         //For each item in the root folder:
+        // If --no-update is set and it's a file and it is named the same thing
+        //     then return
         // If it's a file and it is named the same thing, upload a new version of that file
         //     and return
         // If it's a folder and it is named the same thing, name the upload "file + TODAY"
@@ -305,7 +306,9 @@ has expired tokens and OAUTH2 leg 1 needs to be re-run"""
         // Otherwise, upload the file to the root folder
 
         for (BoxItem.Info itemInfo : folder) {
-            if (itemInfo instanceof BoxFile.Info && itemInfo.getName() == fileName) {
+            if (cmdLineOpts."no-update" && itemInfo instanceof BoxFile.Info && itemInfo.getName() == fileName) {
+                return
+            } else if (itemInfo instanceof BoxFile.Info && itemInfo.getName() == fileName) {
                 itemInfo.getResource().uploadVersion(fileStream)
                 return
             } else if (itemInfo instanceof BoxFolder.Info && itemInfo.getName() == fileName) {
