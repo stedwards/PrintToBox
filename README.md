@@ -17,9 +17,12 @@ Upload <filename> to a Box.com collaborated folder of which <username> is
 the owner. Creates the folder if it doesn't exist.
 
 Options:
- -a <auth_code>   Auth code from OAUTH2 leg one
- -f <folder>      Box folder name. Should be unique per user. Default:
-                  "PrintToBox <username>"
+ -a,--auth-code <auth_code>   Auth code from OAUTH2 leg one
+ -d,--differ                  Upload new version only if the file differs
+ -f,--folder <folder>         Box folder name. Should be unique per user.
+                              Default: "PrintToBox <username>"
+ -U,--no-update               If the filename already exists in Box, do
+                              nothing
 ```
 
 ## Building and Installing

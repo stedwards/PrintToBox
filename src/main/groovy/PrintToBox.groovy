@@ -10,6 +10,7 @@ import groovy.json.JsonSlurper
 import groovy.json.JsonOutput
 import groovy.json.JsonParserType
 import java.nio.channels.FileLock
+import java.security.MessageDigest
 import java.util.logging.Level
 import java.util.logging.Logger
 
@@ -33,6 +34,7 @@ final class PrintToBox {
         String folderName
         String userName
         String fileName
+        String fileSHA1 = ''
         String AUTH_CODE = ''
 
         // Turn off logging to prevent polluting the output.
@@ -45,9 +47,10 @@ the owner. Creates the folder if it doesn't exist.
 
 """, header: 'Options:')
 
-        cli.a(args: 1, argName:'auth_code', 'Auth code from OAUTH2 leg one')
-        cli.f(args: 1, argName:'folder', 'Box folder name. Should be unique per user. Default: "PrintToBox <username>"')
-        cli._(longOpt:'no-update', 'If the filename already exists in Box, do nothing')
+        cli.a(longOpt:'auth-code', args: 1, argName:'auth_code', 'Auth code from OAUTH2 leg one')
+        cli.d(longOpt:'differ', 'Upload new version only if the file differs')
+        cli.f(longOpt:'folder', args: 1, argName:'folder', 'Box folder name. Should be unique per user. Default: "PrintToBox <username>"')
+        cli.U(longOpt:'no-update', 'If the filename already exists in Box, do nothing')
 
         cmdLineOpts = cli.parse(args)
 
@@ -154,6 +157,12 @@ Optional keys:
 
         try {
             fileStream = new FileInputStream(fileName)
+
+            if (cmdLineOpts."differ") {
+                fileSHA1 = new BigInteger(1, MessageDigest.getInstance("SHA1").digest(fileStream.getBytes())).toString(16)
+                fileStream = new FileInputStream(fileName)
+            }
+
         } catch (FileNotFoundException e) {
             println e.getMessage()
             //If the tokens file is inaccessible due to permissions, these are null
@@ -275,7 +284,7 @@ has expired tokens and OAUTH2 leg 1 needs to be re-run"""
         }
 
         try {
-            uploadFileToFolder(printFolder, fileStream, fileName, cmdLineOpts)
+            uploadFileToFolder(printFolder, fileStream, fileName, fileSHA1, cmdLineOpts)
 
         } catch (BoxAPIException e) {
             println 'Error: Box API could not upload the file to the target folder'
@@ -289,7 +298,7 @@ has expired tokens and OAUTH2 leg 1 needs to be re-run"""
         }
     } //end main()
 
-    private static void uploadFileToFolder(BoxFolder folder, InputStream fileStream, String fileName, cmdLineOpts) {
+    private static void uploadFileToFolder(BoxFolder folder, InputStream fileStream, String fileName, String fileSHA1, cmdLineOpts) {
 
         // By definition, there is an explicit race condition on checking if a file exists and then
         // uploading afterward. This is how Box works. There is no way to atomically send a file
@@ -307,6 +316,9 @@ has expired tokens and OAUTH2 leg 1 needs to be re-run"""
 
         for (BoxItem.Info itemInfo : folder) {
             if (cmdLineOpts."no-update" && itemInfo instanceof BoxFile.Info && itemInfo.getName() == fileName) {
+                return
+            } else if (cmdLineOpts."differ" && itemInfo instanceof BoxFile.Info && itemInfo.getName() == fileName &&
+                       itemInfo.getSha1() == fileSHA1) {
                 return
             } else if (itemInfo instanceof BoxFile.Info && itemInfo.getName() == fileName) {
                 itemInfo.getResource().uploadVersion(fileStream)
