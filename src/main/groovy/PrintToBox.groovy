@@ -329,7 +329,7 @@ has expired tokens and OAUTH2 leg 1 needs to be re-run"""
             if (cmdLineOpts."no-update" && itemInfo instanceof BoxFile.Info && itemInfo.getName() == fileName) {
                 return
             } else if (cmdLineOpts."differ" && itemInfo instanceof BoxFile.Info && itemInfo.getName() == fileName &&
-                    itemInfo.getSha1() == fileSHA1) {
+                       itemInfo.getSha1() == fileSHA1) {
                 return
             } else if (cmdLineOpts."replace" && itemInfo instanceof BoxFile.Info && itemInfo.getName() == fileName) {
                 itemInfo.getResource().delete()
