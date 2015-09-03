@@ -50,12 +50,19 @@ the owner. Creates the folder if it doesn't exist.
         cli.a(longOpt:'auth-code', args: 1, argName:'auth_code', 'Auth code from OAUTH2 leg one')
         cli.d(longOpt:'differ', 'Upload new version only if the file differs')
         cli.f(longOpt:'folder', args: 1, argName:'folder', 'Box folder name. Should be unique per user. Default: "PrintToBox <username>"')
+        cli.h(longOpt:'help', 'Print this help text')
+        cli.R(longOpt:'replace', 'If the filename already exists in Box, delete it (and all versions) and replace it with this file')
         cli.U(longOpt:'no-update', 'If the filename already exists in Box, do nothing')
 
         cmdLineOpts = cli.parse(args)
 
-        if (cmdLineOpts.arguments().size() < 2) {
+        if (cmdLineOpts.h || cmdLineOpts.arguments().size() < 2) {
             cli.usage()
+            return
+        }
+
+        if (cmdLineOpts.R && cmdLineOpts.U) {
+            println 'Error: -R/--replace and -U/--no-update are mutually exclusive options. See --help for details.'
             return
         }
 
@@ -307,6 +314,10 @@ has expired tokens and OAUTH2 leg 1 needs to be re-run"""
         //For each item in the root folder:
         // If --no-update is set and it's a file and it is named the same thing
         //     then return
+        // If --differ is set and it's a file and named the same and the SHA1 hash is equivalent
+        //     then return
+        // If --replace is set and it's a file and named the same then delete the old one,
+        //     upload the new one and return
         // If it's a file and it is named the same thing, upload a new version of that file
         //     and return
         // If it's a folder and it is named the same thing, name the upload "file + TODAY"
@@ -319,6 +330,10 @@ has expired tokens and OAUTH2 leg 1 needs to be re-run"""
                 return
             } else if (cmdLineOpts."differ" && itemInfo instanceof BoxFile.Info && itemInfo.getName() == fileName &&
                        itemInfo.getSha1() == fileSHA1) {
+                return
+            } else if (cmdLineOpts."replace" && itemInfo instanceof BoxFile.Info && itemInfo.getName() == fileName) {
+                itemInfo.getResource().delete()
+                folder.uploadFile(fileStream, fileName)
                 return
             } else if (itemInfo instanceof BoxFile.Info && itemInfo.getName() == fileName) {
                 itemInfo.getResource().uploadVersion(fileStream)
