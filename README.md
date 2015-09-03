@@ -1,9 +1,10 @@
 # PrintToBox
 PrintToBox is an application for uploading files for enterprise users to collaborated folders in 
-[Box](https://www.box.com).
+[Box](https://www.box.com). E.g., cron output, logfiles, backups, etc.
 
-Its initial inspiration was for Banner users to be able to print reports directly to Box in INB. It should also work
-for Banner XE, provided the printing interface for reports has not changed (i.e., not CUPS).
+Its initial inspiration was for [Banner](http://www.ellucian.com/student-information-system/) users to be able to 
+print reports directly to Box in [INB](http://banner.wikia.com/wiki/Internet_Native_Banner). It should also work for 
+Banner XE, provided the printing interface for reports has not changed (i.e., not [CUPS](https://cups.org/)).
 
 It is based on standard enterprise user permissions. No admin/co-admin privileges are necessary.
 
@@ -14,13 +15,18 @@ It is recommended that you create a service account in Box with developer access
 PrintToBox [<options>] <username> <filename>
 
 Upload <filename> to a Box.com collaborated folder of which <username> is
-the owner. Creates the folder if it doesn't exist.
+the owner. Creates the collaborated folder and any subfolder[s] if they
+do not exist.
 
 Options:
  -a,--auth-code <auth_code>   Auth code from OAUTH2 leg one
  -d,--differ                  Upload new version only if the file differs
- -f,--folder <folder>         Box folder name. Should be unique per user.
-                              Default: "PrintToBox <username>"
+ -f,--folder <folder>         Box folder path. Top-level should be unique
+                              per user. Default: "PrintToBox <username>"
+ -h,--help                    Print this help text
+ -R,--replace                 If the filename already exists in Box,
+                              delete it (and all versions) and replace it
+                              with this file
  -U,--no-update               If the filename already exists in Box, do
                               nothing
 ```
@@ -57,13 +63,14 @@ Options:
  * If you're too slow, do steps 5-7 again
  
 ## Tea4CUPS
-1. Add a printer. E.g., `sudo lpadmin -p 'BOXPRINTER' -E -v 'tea4cups://'`
-2. Edit the Tea4CUPS config file, `/etc/cups/tea4cups.conf`, adding the following lines for the printer you are configuring:
+1. Install Tea4CUPS using your distribution package manager or get it here: [Tea4CUPS](http://www.pykota.com/software/tea4cups)
+2. Add a printer. E.g., `sudo lpadmin -p 'BOXPRINTER' -E -v 'tea4cups://'`
+3. Edit the Tea4CUPS config file, `/etc/cups/tea4cups.conf`, adding the following lines for the printer you are configuring:
         
         [BOXPRINTER]
         prehook_0 : /usr/bin/PrintToBox $TEAUSERNAME $TEADATAFILE >>/var/log/PrintToBox.log 2>>/var/log/PrintToBox.err
         
-3. Test
+4. Test
         
         lpr -PBOXPRINTER testfile
         lpq -PBOXPRINTER
