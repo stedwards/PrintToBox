@@ -21,8 +21,8 @@ do not exist.
 Options:
  -a,--auth-code <auth_code>   Auth code from OAUTH2 leg one
  -d,--differ                  Upload new version only if the file differs
- -f,--folder <folder>         Box folder path. Top-level should be unique
-                              per user. Default: "PrintToBox <username>"
+ -f,--folder <folder>         Box folder path. Top-level should be unique.
+                              Default: "PrintToBox <username>"
  -h,--help                    Print this help text
  -R,--replace                 If the filename already exists in Box,
                               delete it (and all versions) and replace it

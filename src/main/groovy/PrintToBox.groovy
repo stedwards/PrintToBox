@@ -53,7 +53,7 @@ do not exist.
 
         cli.a(longOpt:'auth-code', args: 1, argName:'auth_code', 'Auth code from OAUTH2 leg one')
         cli.d(longOpt:'differ', 'Upload new version only if the file differs')
-        cli.f(longOpt:'folder', args: 1, argName:'folder', 'Box folder path. Top-level should be unique per user. Default: "PrintToBox <username>"')
+        cli.f(longOpt:'folder', args: 1, argName:'folder', 'Box folder path. Top-level should be unique. Default: "PrintToBox <username>"')
         cli.h(longOpt:'help', 'Print this help text')
         cli.R(longOpt:'replace', 'If the filename already exists in Box, delete it (and all versions) and replace it with this file')
         cli.U(longOpt:'no-update', 'If the filename already exists in Box, do nothing')
