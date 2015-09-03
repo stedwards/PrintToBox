@@ -10,6 +10,7 @@ import groovy.json.JsonSlurper
 import groovy.json.JsonOutput
 import groovy.json.JsonParserType
 import java.nio.channels.FileLock
+import java.nio.file.Path
 import java.security.MessageDigest
 import java.util.logging.Level
 import java.util.logging.Logger
@@ -22,6 +23,7 @@ final class PrintToBox {
         BoxAPIConnection api
         BoxUser.Info userInfo
         BoxFolder rootFolder
+        BoxFolder collaborationFolder
         BoxFolder printFolder
         FileInputStream fileStream
         def cli
@@ -32,6 +34,7 @@ final class PrintToBox {
         FileLock tokensLock
         RandomAccessFile tokensRAF
         String folderName
+        String collaborationFolderName
         String userName
         String fileName
         String fileSHA1 = ''
@@ -43,13 +46,14 @@ final class PrintToBox {
 PrintToBox [<options>] <username> <filename>
 
 Upload <filename> to a Box.com collaborated folder of which <username> is
-the owner. Creates the folder if it doesn't exist.
+the owner. Creates the collaborated folder and any subfolder[s] if they
+do not exist.
 
 """, header: 'Options:')
 
         cli.a(longOpt:'auth-code', args: 1, argName:'auth_code', 'Auth code from OAUTH2 leg one')
         cli.d(longOpt:'differ', 'Upload new version only if the file differs')
-        cli.f(longOpt:'folder', args: 1, argName:'folder', 'Box folder name. Should be unique per user. Default: "PrintToBox <username>"')
+        cli.f(longOpt:'folder', args: 1, argName:'folder', 'Box folder path. Top-level should be unique per user. Default: "PrintToBox <username>"')
         cli.h(longOpt:'help', 'Print this help text')
         cli.R(longOpt:'replace', 'If the filename already exists in Box, delete it (and all versions) and replace it with this file')
         cli.U(longOpt:'no-update', 'If the filename already exists in Box, do nothing')
@@ -248,8 +252,15 @@ has expired tokens and OAUTH2 leg 1 needs to be re-run"""
             return
         }
 
+        File folder = new File(folderName)
+        if (folder.getParent() != null) {
+            collaborationFolderName = folder.toPath().getName(0).toString()
+        } else {
+            collaborationFolderName = folderName
+        }
+
         try {
-            printFolder = getFolder(rootFolder, folderName)
+            collaborationFolder = getFolder(rootFolder, collaborationFolderName)
         } catch (BoxAPIException e) {
             println 'Error: Could not create or access the target folder'
             println boxErrorMessage(e)
@@ -268,13 +279,13 @@ has expired tokens and OAUTH2 leg 1 needs to be re-run"""
         }
 
         try {
-            setupCollaboration(printFolder, userInfo, userName + configOpts.enterpriseDomain)
+            setupCollaboration(collaborationFolder, userInfo, userName + configOpts.enterpriseDomain)
 
         } catch (BoxAPIException e) {
             println """Error: Could not properly set collaboration on the folder:
 1) Check that user '${userName}' exists in Box.
 2) Check that enterpriseDomain '${configOpts.enterpriseDomain}' is correct
-3) Ensure the user does not have a folder '${printFolder.getInfo().getName()}' already"""
+3) Ensure the user does not have a folder '${collaborationFolder.getInfo().getName()}' already"""
             println boxErrorMessage(e)
 
             tokensLock.release()
@@ -283,6 +294,43 @@ has expired tokens and OAUTH2 leg 1 needs to be re-run"""
             return
         } catch (e) {
             println 'Error: Could not set the collaboration on the target folder'
+            println e.toString()
+            tokensLock.release()
+            tokensRAF.close()
+
+            return
+        }
+
+        try {
+            printFolder = collaborationFolder
+
+            if (folder.getParent() != null) {
+
+                Path folderPath = folder.toPath()
+
+                //If Path is CollabFolder/SubFolder then just create SubFolder because Java will not
+                // allow subpaths of length = 1 so the else{} fails in this case
+                //Shrink path to reflect that top-level is collaborationFolder rather than root folder
+                // because we know collaborationFolder already exists (probably...)
+
+                if (folderPath.getNameCount() == 2) {
+                    printFolder = getFolder(printFolder, folderPath.getName(1).toString())
+                } else {
+                    folderPath.subpath(1, folderPath.getNameCount() - 1).each({
+                        printFolder = getFolder(printFolder, it.toString())
+                    })
+                }
+            }
+        } catch (BoxAPIException e) {
+            println 'Error: Box API could not retrieve or create the subfolders'
+            println boxErrorMessage(e)
+
+            tokensLock.release()
+            tokensRAF.close()
+
+            return
+        } catch (e) {
+            println 'Error: System could not retrieve or create the subfolders'
             println e.toString()
             tokensLock.release()
             tokensRAF.close()
@@ -361,7 +409,6 @@ has expired tokens and OAUTH2 leg 1 needs to be re-run"""
         return retval
     }
 
-    //The service account will use top-level folders
     private static BoxFolder getFolder(BoxFolder folder, String folderName) {
 
         //Try to find an existing folder and return that
