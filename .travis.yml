@@ -3,5 +3,5 @@ jdk:
   - openjdk7
   - oraclejdk7
 script:
-  - bundle exec ./gradlew createRpm
-  - bundle exec ./gradlew createDeb
+  - ./gradlew createRpm
+  - ./gradlew createDeb
