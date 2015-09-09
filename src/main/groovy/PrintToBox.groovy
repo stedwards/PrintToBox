@@ -16,6 +16,7 @@ import java.util.logging.Level
 import java.util.logging.Logger
 
 final class PrintToBox {
+    private static final String VERSION = '1.2'
     private static final String CONFIG_FILE = '/etc/PrintToBox.conf'
     private static final String TOKENS_FILE = '/var/cache/PrintToBox/tokens'
 
@@ -57,8 +58,14 @@ do not exist.
         cli.h(longOpt:'help', 'Print this help text')
         cli.R(longOpt:'replace', 'If the filename already exists in Box, delete it (and all versions) and replace it with this file')
         cli.U(longOpt:'no-update', 'If the filename already exists in Box, do nothing')
+        cli.V(longOpt:'version', 'Display the program version and exit')
 
         cmdLineOpts = cli.parse(args)
+
+        if (cmdLineOpts.V) {
+            println 'PrintToBox ' + VERSION
+            return
+        }
 
         if (cmdLineOpts.h || cmdLineOpts.arguments().size() < 2) {
             cli.usage()

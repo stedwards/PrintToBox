@@ -29,6 +29,7 @@ Options:
                               with this file
  -U,--no-update               If the filename already exists in Box, do
                               nothing
+ -V,--version                 Display the program version and exit
 ```
 
 ## Building and Installing
