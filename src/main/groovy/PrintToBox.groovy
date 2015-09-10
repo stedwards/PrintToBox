@@ -26,6 +26,8 @@ final class PrintToBox {
         BoxFolder rootFolder
         BoxFolder collaborationFolder
         BoxFolder printFolder
+        File file
+        long fileSize
         FileInputStream fileStream
         def cli
         def cmdLineOpts
@@ -174,11 +176,13 @@ Optional keys:
         }
 
         try {
-            fileStream = new FileInputStream(fileName)
+            file = new File(fileName)
+            fileSize = file.length()
+            fileStream = new FileInputStream(file)
 
             if (cmdLineOpts."differ") {
                 fileSHA1 = new BigInteger(1, MessageDigest.getInstance("SHA1").digest(fileStream.getBytes())).toString(16)
-                fileStream = new FileInputStream(fileName)
+                fileStream = new FileInputStream(file)
             }
 
         } catch (FileNotFoundException e) {
@@ -346,7 +350,7 @@ has expired tokens and OAUTH2 leg 1 needs to be re-run"""
         }
 
         try {
-            uploadFileToFolder(printFolder, fileStream, fileName, fileSHA1, cmdLineOpts)
+            uploadFileToFolder(printFolder, fileStream, file.getName(), fileSize, fileSHA1, cmdLineOpts)
 
         } catch (BoxAPIException e) {
             println 'Error: Box API could not upload the file to the target folder'
@@ -360,7 +364,7 @@ has expired tokens and OAUTH2 leg 1 needs to be re-run"""
         }
     } //end main()
 
-    private static void uploadFileToFolder(BoxFolder folder, InputStream fileStream, String fileName, String fileSHA1, cmdLineOpts) {
+    private static void uploadFileToFolder(BoxFolder folder, InputStream fileStream, String fileName, long fileSize, String fileSHA1, cmdLineOpts) {
 
         // By definition, there is an explicit race condition on checking if a file exists and then
         // uploading afterward. This is how Box works. There is no way to atomically send a file
@@ -387,20 +391,24 @@ has expired tokens and OAUTH2 leg 1 needs to be re-run"""
                        itemInfo.getSha1() == fileSHA1) {
                 return
             } else if (cmdLineOpts."replace" && itemInfo instanceof BoxFile.Info && itemInfo.getName() == fileName) {
+                //Use canUploadVersion() because folder.canUpload() will return a filename conflict
+                itemInfo.getResource().canUploadVersion(fileName, fileSize, folder.getID())
                 itemInfo.getResource().delete()
                 folder.uploadFile(fileStream, fileName)
                 return
             } else if (itemInfo instanceof BoxFile.Info && itemInfo.getName() == fileName) {
+                itemInfo.getResource().canUploadVersion(fileName, fileSize, folder.getID())
                 itemInfo.getResource().uploadVersion(fileStream)
                 return
             } else if (itemInfo instanceof BoxFolder.Info && itemInfo.getName() == fileName) {
-                folder.uploadFile(fileStream, fileName + ' ' + new Date())
+                String newFileName = fileName + ' ' + new Date()
+                folder.canUpload(newFileName, fileSize)
+                folder.uploadFile(fileStream, newFileName)
                 return
             }
         }
-
+        folder.canUpload(fileName, fileSize)
         folder.uploadFile(fileStream, fileName)
-
     }
 
     private static String boxErrorMessage(BoxAPIException boxAPIException) {
