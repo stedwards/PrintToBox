@@ -11,6 +11,7 @@ import groovy.json.JsonOutput
 import groovy.json.JsonParserType
 import java.nio.channels.FileLock
 import java.nio.file.Path
+import java.security.DigestInputStream
 import java.security.MessageDigest
 import java.util.logging.Level
 import java.util.logging.Logger
@@ -181,10 +182,13 @@ Optional keys:
             fileStream = new FileInputStream(file)
 
             if (cmdLineOpts."differ") {
-                fileSHA1 = new BigInteger(1, MessageDigest.getInstance("SHA1").digest(fileStream.getBytes())).toString(16)
+                MessageDigest sha = MessageDigest.getInstance("SHA1");
+                DigestInputStream digestInputStream = new DigestInputStream(fileStream, sha);
+                byte[] b = new byte[32768]
+                while (digestInputStream.read(b) != -1) ;
+                fileSHA1 = new BigInteger(1, sha.digest()).toString(16)
                 fileStream = new FileInputStream(file)
             }
-
         } catch (FileNotFoundException e) {
             println e.getMessage()
             //If the tokens file is inaccessible due to permissions, these are null
