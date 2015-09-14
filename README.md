@@ -16,7 +16,7 @@ PrintToBox [<options>] <username> <filename> [<filename 2>...]
 
 Upload files to a Box.com collaborated folder of which <username> is
 the owner. Creates the collaborated folder and any subfolder[s] if they
-do not exist.
+do not exist. By default, it uploads a new version for existing files.
 
 Options:
  -a,--auth-code <auth_code>   Auth code from OAUTH2 leg one
@@ -27,6 +27,9 @@ Options:
  -R,--replace                 If the filename already exists in Box,
                               delete it (and all versions) and replace it
                               with this file
+ -T,--total-size              Abort if total size of file set exceeds
+                              storage in Box. May not make sense with
+                              --replace, --differ, or --no-update
  -U,--no-update               If the filename already exists in Box, do
                               nothing
  -V,--version                 Display the program version and exit

@@ -29,6 +29,7 @@ final class PrintToBox {
         BoxFolder printFolder
         File file
         long fileSize
+        long totalSize = 0l
         FileInputStream fileStream
         def cli
         def cmdLineOpts
@@ -51,7 +52,7 @@ PrintToBox [<options>] <username> <filename> [<filename 2>...]
 
 Upload files to a Box.com collaborated folder of which <username> is
 the owner. Creates the collaborated folder and any subfolder[s] if they
-do not exist.
+do not exist. By default, it uploads a new version for existing files.
 
 """, header: 'Options:')
 
@@ -60,6 +61,7 @@ do not exist.
         cli.f(longOpt:'folder', args: 1, argName:'folder', 'Box folder path. Top-level should be unique. Default: "PrintToBox <username>"')
         cli.h(longOpt:'help', 'Print this help text')
         cli.R(longOpt:'replace', 'If the filename already exists in Box, delete it (and all versions) and replace it with this file')
+        cli.T(longOpt:'total-size', 'Abort if total size of file set exceeds storage in Box. May not make sense with --replace, --differ, or --no-update')
         cli.U(longOpt:'no-update', 'If the filename already exists in Box, do nothing')
         cli.V(longOpt:'version', 'Display the program version and exit')
 
@@ -182,6 +184,7 @@ Optional keys:
             fileNames.each { fileName, fileProperties ->
                 file = new File(fileName)
                 fileSize = file.length()
+                totalSize += fileSize
                 fileStream = new FileInputStream(file)
 
                 if (cmdLineOpts."differ") {
@@ -355,6 +358,19 @@ has expired tokens and OAUTH2 leg 1 needs to be re-run"""
         } catch (e) {
             println 'Error: System could not retrieve or create the subfolders'
             println e.toString()
+            tokensLock.release()
+            tokensRAF.close()
+
+            return
+        }
+
+        try {
+            if (cmdLineOpts."total-size" && fileNames.size() > 1) {
+                printFolder.canUpload('PrintToBox' + new Date().toString() + new Date().toString() + 'PrintToBox', totalSize)
+            }
+        } catch (BoxAPIException e) {
+            println 'Error: Total size of the file set is too large'
+            println boxErrorMessage(e)
             tokensLock.release()
             tokensRAF.close()
 
