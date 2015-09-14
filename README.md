@@ -12,9 +12,9 @@ It is recommended that you create a service account in Box with developer access
 
 ## Usage
 ```
-PrintToBox [<options>] <username> <filename>
+PrintToBox [<options>] <username> <filename> [<filename 2>...]
 
-Upload <filename> to a Box.com collaborated folder of which <username> is
+Upload files to a Box.com collaborated folder of which <username> is
 the owner. Creates the collaborated folder and any subfolder[s] if they
 do not exist.
 

@@ -32,24 +32,24 @@ final class PrintToBox {
         FileInputStream fileStream
         def cli
         def cmdLineOpts
-        def slurpOpts
         def configOpts = [:]
+        def fileNames = [:]
+        def slurpOpts
         def tokens
         FileLock tokensLock
         RandomAccessFile tokensRAF
         String folderName
         String collaborationFolderName
         String userName
-        String fileName
         String fileSHA1 = ''
         String AUTH_CODE = ''
 
         // Turn off logging to prevent polluting the output.
         Logger.getLogger("com.box.sdk").setLevel(Level.OFF);
         cli = new CliBuilder(usage: """
-PrintToBox [<options>] <username> <filename>
+PrintToBox [<options>] <username> <filename> [<filename 2>...]
 
-Upload <filename> to a Box.com collaborated folder of which <username> is
+Upload files to a Box.com collaborated folder of which <username> is
 the owner. Creates the collaborated folder and any subfolder[s] if they
 do not exist.
 
@@ -81,7 +81,9 @@ do not exist.
         }
 
         userName = cmdLineOpts.arguments()[0]
-        fileName = cmdLineOpts.arguments()[1]
+        cmdLineOpts.arguments()[1..-1].each { k ->
+            fileNames[k] = [:]
+        }
 
         if (cmdLineOpts.a)
             AUTH_CODE = cmdLineOpts.a
@@ -177,17 +179,23 @@ Optional keys:
         }
 
         try {
-            file = new File(fileName)
-            fileSize = file.length()
-            fileStream = new FileInputStream(file)
-
-            if (cmdLineOpts."differ") {
-                MessageDigest sha = MessageDigest.getInstance("SHA1");
-                DigestInputStream digestInputStream = new DigestInputStream(fileStream, sha);
-                byte[] b = new byte[32768]
-                while (digestInputStream.read(b) != -1) ;
-                fileSHA1 = new BigInteger(1, sha.digest()).toString(16)
+            fileNames.each { fileName, fileProperties ->
+                file = new File(fileName)
+                fileSize = file.length()
                 fileStream = new FileInputStream(file)
+
+                if (cmdLineOpts."differ") {
+                    MessageDigest sha = MessageDigest.getInstance("SHA1");
+                    DigestInputStream digestInputStream = new DigestInputStream(fileStream, sha);
+                    byte[] b = new byte[32768]
+                    while (digestInputStream.read(b) != -1) ;
+                    fileProperties.SHA1 = sprintf("%040x", new BigInteger(1, sha.digest()))
+                    fileStream = new FileInputStream(file)
+                }
+
+                fileProperties.file = file
+                fileProperties.size = fileSize
+                fileProperties.stream = fileStream
             }
         } catch (FileNotFoundException e) {
             println e.getMessage()
@@ -354,7 +362,15 @@ has expired tokens and OAUTH2 leg 1 needs to be re-run"""
         }
 
         try {
-            uploadFileToFolder(printFolder, fileStream, file.getName(), fileSize, fileSHA1, cmdLineOpts)
+            fileNames.each { fileName, fileProperties ->
+                uploadFileToFolder(
+                        printFolder,
+                        (FileInputStream) fileProperties.stream,
+                        (String) fileProperties.file.getName(),
+                        (long) fileProperties.size,
+                        (String) fileProperties.SHA1,
+                        cmdLineOpts)
+            }
 
         } catch (BoxAPIException e) {
             println 'Error: Box API could not upload the file to the target folder'
