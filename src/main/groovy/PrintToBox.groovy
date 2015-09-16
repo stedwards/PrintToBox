@@ -333,18 +333,13 @@ has expired tokens and OAUTH2 leg 1 needs to be re-run"""
 
                 Path folderPath = folder.toPath()
 
-                //If Path is CollabFolder/SubFolder then just create SubFolder because Java will not
-                // allow subpaths of length = 1 so the else{} fails in this case
-                //Shrink path to reflect that top-level is collaborationFolder rather than root folder
-                // because we know collaborationFolder already exists (probably...)
+                //Normally, you would think the subpath is "getNameCount() - 1" but as the Javadoc says,
+                // "endIndex - the index of the last element, exclusive". So, we nuke the "- 1" to make it
+                // pull in the final element.
 
-                if (folderPath.getNameCount() == 2) {
-                    printFolder = getFolder(printFolder, folderPath.getName(1).toString())
-                } else {
-                    folderPath.subpath(1, folderPath.getNameCount() - 1).each({
-                        printFolder = getFolder(printFolder, it.toString())
-                    })
-                }
+                folderPath.subpath(1, folderPath.getNameCount()).each({
+                    printFolder = getFolder(printFolder, it.toString())
+                })
             }
         } catch (BoxAPIException e) {
             println 'Error: Box API could not retrieve or create the subfolders'
