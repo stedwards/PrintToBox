@@ -27,22 +27,17 @@ final class PrintToBox {
         BoxFolder rootFolder
         BoxFolder collaborationFolder
         BoxFolder printFolder
-        File file
-        long fileSize
         long totalSize = 0l
-        FileInputStream fileStream
         def cli
         def cmdLineOpts
         def configOpts = [:]
         def fileNames = [:]
-        def slurpOpts
         def tokens
+        File folder
         FileLock tokensLock
         RandomAccessFile tokensRAF
         String folderName
-        String collaborationFolderName
         String userName
-        String fileSHA1 = ''
         String AUTH_CODE = ''
 
         // Turn off logging to prevent polluting the output.
@@ -93,7 +88,7 @@ do not exist. By default, it uploads a new version for existing files.
         try {
             //The LAX parser is the only one that supports comments (/* */) in JSON
             //However, it returns a horrible map type. Convert it here to a normal Groovy map.
-            slurpOpts = new JsonSlurper().setType(JsonParserType.LAX).parse(new File(CONFIG_FILE))
+            def slurpOpts = new JsonSlurper().setType(JsonParserType.LAX).parse(new File(CONFIG_FILE))
             slurpOpts.each {k, v -> configOpts.put(k, slurpOpts.get(k))}
 
             assert configOpts.clientId instanceof String
@@ -182,10 +177,10 @@ Optional keys:
 
         try {
             fileNames.each { fileName, fileProperties ->
-                file = new File(fileName)
-                fileSize = file.length()
+                File file = new File(fileName)
+                long fileSize = file.length()
                 totalSize += fileSize
-                fileStream = new FileInputStream(file)
+                FileInputStream fileStream = new FileInputStream(file)
 
                 if (cmdLineOpts."differ") {
                     MessageDigest sha = MessageDigest.getInstance("SHA1");
@@ -278,15 +273,19 @@ has expired tokens and OAUTH2 leg 1 needs to be re-run"""
             return
         }
 
-        File folder = new File(folderName)
-        if (folder.getParent() != null) {
-            collaborationFolderName = folder.toPath().getName(0).toString()
-        } else {
-            collaborationFolderName = folderName
-        }
-
         try {
+            String collaborationFolderName
+
+            folder = new File(folderName)
+
+            if (folder.getParent() != null) {
+                collaborationFolderName = folder.toPath().getName(0).toString()
+            } else {
+                collaborationFolderName = folderName
+            }
+
             collaborationFolder = getFolder(rootFolder, collaborationFolderName)
+
         } catch (BoxAPIException e) {
             println 'Error: Could not create or access the target folder'
             println boxErrorMessage(e)
