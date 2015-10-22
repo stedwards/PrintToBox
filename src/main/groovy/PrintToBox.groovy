@@ -30,10 +30,9 @@ final class PrintToBox {
         long totalSize = 0l
         def cli
         def cmdLineOpts
-        def configOpts = [:]
-        def fileNames = [:]
+        def configOpts
+        def files = [:]
         def tokens
-        File folder
         FileLock tokensLock
         RandomAccessFile tokensRAF
         String folderName
@@ -79,16 +78,71 @@ do not exist. By default, it uploads a new version for existing files.
 
         userName = cmdLineOpts.arguments()[0]
         cmdLineOpts.arguments()[1..-1].each { k ->
-            fileNames[k] = [:]
+            files[k] = [:]
         }
 
         if (cmdLineOpts.a)
             AUTH_CODE = cmdLineOpts.a
 
+        configOpts = getConfigOpts(CONFIG_FILE)
+
+        if (cmdLineOpts.f) {
+            folderName = cmdLineOpts.f
+        } else if (configOpts.baseFolderName) {
+            folderName = configOpts.baseFolderName + ' ' + userName
+        } else {
+            folderName = 'PrintToBox ' + userName
+        }
+
+        tokens = openTokensFile(tokensRAF, tokensLock, (Integer) configOpts.tokensLockRetries)
+
+        if (tokens.accessToken == null && tokens.refreshToken == null && AUTH_CODE.isEmpty()) {
+            println """Error: Either '${TOKENS_FILE}' is inaccessible (file permissions)
+or OAUTH2 is not set up. If the tokens file is accessible, either supply
+the authorization code from leg one of OAUTH2 or set up the tokens file
+manually."""
+            //If the tokens file is inaccessible due to permissions, these are null
+            if (tokensLock != null) tokensLock.release();
+            if (tokensRAF != null) tokensRAF.close();
+            return
+        }
+
+        try {
+            totalSize = setFilesProperties(files, cmdLineOpts."differ")
+
+            api = getAPI(configOpts, AUTH_CODE, tokens)
+
+            updateTokens(api, tokensRAF, tokens)
+
+            userInfo            = getAPIUserInfo(api)
+            rootFolder          = getRootFolder(api)
+            collaborationFolder = getCollaborationFolder(rootFolder, folderName)
+
+            setupCollaboration(collaborationFolder, userInfo, userName, (String) configOpts.enterpriseDomain)
+
+            printFolder = getUploadFolder(collaborationFolder, folderName)
+
+            if (cmdLineOpts."total-size" && files.size() > 1) {
+                checkUploadSize(printFolder, totalSize)
+            }
+
+            uploadFiles(files, printFolder, cmdLineOpts)
+
+        } finally {
+            //If the tokens file is inaccessible due to permissions, these are null
+            if (tokensLock != null) tokensLock.release()
+            if (tokensRAF != null) tokensRAF.close()
+        }
+    } //end main()
+
+    private static def getConfigOpts(String configFile) {
+
+        def configOpts = [:]
+
         try {
             //The LAX parser is the only one that supports comments (/* */) in JSON
             //However, it returns a horrible map type. Convert it here to a normal Groovy map.
-            def slurpOpts = new JsonSlurper().setType(JsonParserType.LAX).parse(new File(CONFIG_FILE))
+            def slurpOpts = new JsonSlurper().setType(JsonParserType.LAX).parse(new File(configFile))
             slurpOpts.each {k, v -> configOpts.put(k, slurpOpts.get(k))}
 
             assert configOpts.clientId instanceof String
@@ -97,8 +151,13 @@ do not exist. By default, it uploads a new version for existing files.
             assert (!configOpts.tokensLockRetries || configOpts.tokensLockRetries instanceof Integer)
             assert (!configOpts.baseFolderName || configOpts.baseFolderName instanceof String)
 
+            if (!configOpts.tokensLockRetries)
+                configOpts.tokensLockRetries = 1000
+
+            return configOpts
+
         } catch (AssertionError e) {
-            println 'Error: Invalid config file: ' + """${CONFIG_FILE}
+            println 'Error: Invalid config file: ' + """${configFile}
 """ + 'Expected format (JSON):' + """
 {
   "enterpriseDomain": "@example.com",
@@ -109,31 +168,26 @@ do not exist. By default, it uploads a new version for existing files.
 Optional keys:
   "tokensLockRetries": 1000 (Default)
   "baseFolderName": "PrintToBox" (Default)"""
-
-            return
+            //FIXME exit in main() not here
+            System.exit()
         } catch (e) {
             println e.toString()
             println e.getCause().toString()
-            return
+            //FIXME exit in main() not here
+            System.exit()
         }
+    }
 
-        if (!configOpts.tokensLockRetries)
-            configOpts.tokensLockRetries = 1000
+    private static def openTokensFile(RandomAccessFile tokensRAF, FileLock tokensLock, Integer retries) {
 
-        if (cmdLineOpts.f) {
-            folderName = cmdLineOpts.f
-        } else if (configOpts.baseFolderName) {
-            folderName = configOpts.baseFolderName + ' ' + userName
-        } else {
-            folderName = 'PrintToBox ' + userName
-        }
+        def tokens = [:]
 
         try {
             tokensRAF = new RandomAccessFile(TOKENS_FILE, "rw");
 
             //The program takes about 6 wall seconds to complete. Depending on the random sleep times chosen,
             //1000 loops gives the program between 16 and 100 minutes to complete, but probably ~ 1 hour.
-            (1..configOpts.tokensLockRetries).find {
+            (1..retries).find {
                 tokensLock = tokensRAF.getChannel().tryLock()
                 if (tokensLock == null) {
                     Random r = new Random()
@@ -145,7 +199,7 @@ Optional keys:
             }
 
             if (tokensLock == null) {
-                println "Error: Cannot lock tokens file after ${configOpts.tokensLockRetries} tries. " +
+                println "Error: Cannot lock tokens file after ${retries} tries. " +
                         'Consider setting the ("tokensLockRetries": 1234) option in the config file.'
                 tokensRAF.close()
                 return
@@ -160,6 +214,9 @@ Optional keys:
 
             assert tokens.accessToken instanceof String
             assert tokens.refreshToken instanceof String
+
+            return tokens
+
         } catch (AssertionError e) {
             println 'Error: Invalid tokens file: ' + """${TOKENS_FILE}
 """ + 'Expected format (JSON):' + """
@@ -169,20 +226,27 @@ Optional keys:
 }"""
             tokensLock.release()
             tokensRAF.close()
-            return
+            //FIXME move to main() don't exit here
+            System.exit()
+
         } catch (e) {
             // Do nothing, probably FileNotFound
             tokens = [accessToken: null, refreshToken: null]
         }
+    }
+
+    private static long setFilesProperties(files, differ) {
+
+        long totalSize = 0l
 
         try {
-            fileNames.each { fileName, fileProperties ->
-                File file = new File(fileName)
+            files.each { fileName, fileProperties ->
+                File file = new File((String)fileName)
                 long fileSize = file.length()
                 totalSize += fileSize
                 FileInputStream fileStream = new FileInputStream(file)
 
-                if (cmdLineOpts."differ") {
+                if (differ) {
                     MessageDigest sha = MessageDigest.getInstance("SHA1");
                     DigestInputStream digestInputStream = new DigestInputStream(fileStream, sha);
                     byte[] b = new byte[32768]
@@ -195,30 +259,30 @@ Optional keys:
                 fileProperties.size = fileSize
                 fileProperties.stream = fileStream
             }
+
+            return totalSize
+
         } catch (FileNotFoundException e) {
             println e.getMessage()
-            //If the tokens file is inaccessible due to permissions, these are null
-            if (tokensLock != null) tokensLock.release();
-            if (tokensRAF != null) tokensRAF.close()
-            return
         }
+    }
 
-        if (tokens.accessToken == null && tokens.refreshToken == null && AUTH_CODE.isEmpty()) {
-            println """Error: Either '${TOKENS_FILE}' is inaccessible (file permissions)
-or OAUTH2 is not set up. If the tokens file is accessible, either supply
-the authorization code from leg one of OAUTH2 or set up the tokens file
-manually."""
-            //If the tokens file is inaccessible due to permissions, these are null
-            if (tokensLock != null) tokensLock.release();
-            if (tokensRAF != null) tokensRAF.close();
-            return
-        }
+    private static BoxAPIConnection getAPI(configOpts, String authCode, tokens) {
+
+        BoxAPIConnection api
 
         try {
-            if (!AUTH_CODE.isEmpty()) {
-                api = new BoxAPIConnection(configOpts.clientId, configOpts.clientSecret, AUTH_CODE)
+            if (!authCode.isEmpty()) {
+                api = new BoxAPIConnection(
+                        (String) configOpts.clientId,
+                        (String) configOpts.clientSecret,
+                        authCode)
             } else {
-                api = new BoxAPIConnection(configOpts.clientId, configOpts.clientSecret, tokens.accessToken, tokens.refreshToken)
+                api = new BoxAPIConnection(
+                        (String) configOpts.clientId,
+                        (String) configOpts.clientSecret,
+                        (String) tokens.accessToken,
+                        (String) tokens.refreshToken)
             }
         } catch (BoxAPIException e) {
             println """Error: Could not connect to Box API. Usually, this means one of:
@@ -226,13 +290,10 @@ manually."""
 2) ${TOKENS_FILE} has expired tokens and OAUTH2 leg 1 needs to be re-run
 """
             println boxErrorMessage(e)
-
-            tokensLock.release()
-            tokensRAF.close()
-
-            return
         }
+    }
 
+    private static void updateTokens(BoxAPIConnection api, RandomAccessFile tokensRAF, tokens) {
         try {
             tokens.accessToken = api.getAccessToken()
             tokens.refreshToken = api.getRefreshToken()
@@ -244,137 +305,108 @@ manually."""
             println """Error: Could not get new tokens. Most likely, ${TOKENS_FILE}
 has expired tokens and OAUTH2 leg 1 needs to be re-run"""
             println boxErrorMessage(e)
-
-            tokensLock.release()
-            tokensRAF.close()
-
-            return
         } catch (e) {
             println 'Error: Could not get new tokens and write them to disk'
             println e.toString()
-
-            tokensLock.release()
-            tokensRAF.close()
-
-            return
         }
+    }
+
+    private static BoxUser.Info getAPIUserInfo(BoxAPIConnection api) {
+
+        BoxUser.Info userInfo
 
         try {
             userInfo = BoxUser.getCurrentUser(api).getInfo()
-            rootFolder = BoxFolder.getRootFolder(api)
+            return userInfo
 
         } catch (BoxAPIException e) {
-            println 'Error: Could not access the service account user via the API or get its root folder'
+            println 'Error: Could not access the service account user via the API'
             println boxErrorMessage(e)
-
-            tokensLock.release()
-            tokensRAF.close()
-
-            return
         }
+    }
+
+    private static BoxFolder getRootFolder(BoxAPIConnection api) {
+
+        BoxFolder rootFolder
 
         try {
-            String collaborationFolderName
+            rootFolder = BoxFolder.getRootFolder(api)
+            return rootFolder
 
-            folder = new File(folderName)
+        } catch (BoxAPIException e) {
+            println 'Error: Could not get the service account root folder'
+            println boxErrorMessage(e)
+        }
+    }
 
-            if (folder.getParent() != null) {
-                collaborationFolderName = folder.toPath().getName(0).toString()
-            } else {
-                collaborationFolderName = folderName
+    private static BoxFolder getCollaborationFolder(BoxFolder rootFolder, String folderName) {
+
+        BoxFolder collaborationFolder
+        File folderFileObj = new File(folderName)
+        String collaborationFolderName = folderName
+
+        try {
+            if (folderFileObj.getParent() != null) {
+                collaborationFolderName = folderFileObj.toPath().getName(0).toString()
             }
 
             collaborationFolder = getFolder(rootFolder, collaborationFolderName)
 
+            return collaborationFolder
+
         } catch (BoxAPIException e) {
             println 'Error: Could not create or access the target folder'
             println boxErrorMessage(e)
-
-            tokensLock.release()
-            tokensRAF.close()
-
-            return
         } catch (e) {
             println 'Error: Could not create or access the target folder'
             println e.toString()
-            tokensLock.release()
-            tokensRAF.close()
-
-            return
         }
+    }
+
+    private static BoxFolder getUploadFolder(BoxFolder collaborationFolder, String folderName) {
+
+        BoxFolder uploadFolder = collaborationFolder
+        File folderFileObj = new File(folderName)
 
         try {
-            setupCollaboration(collaborationFolder, userInfo, userName + configOpts.enterpriseDomain)
+            if (folderFileObj.getParent() != null) {
 
-        } catch (BoxAPIException e) {
-            println """Error: Could not properly set collaboration on the folder:
-1) Check that user '${userName}' exists in Box.
-2) Check that enterpriseDomain '${configOpts.enterpriseDomain}' is correct
-3) Ensure the user does not have a folder '${collaborationFolder.getInfo().getName()}' already"""
-            println boxErrorMessage(e)
-
-            tokensLock.release()
-            tokensRAF.close()
-
-            return
-        } catch (e) {
-            println 'Error: Could not set the collaboration on the target folder'
-            println e.toString()
-            tokensLock.release()
-            tokensRAF.close()
-
-            return
-        }
-
-        try {
-            printFolder = collaborationFolder
-
-            if (folder.getParent() != null) {
-
-                Path folderPath = folder.toPath()
+                Path folderPath = folderFileObj.toPath()
 
                 //Normally, you would think the subpath is "getNameCount() - 1" but as the Javadoc says,
                 // "endIndex - the index of the last element, exclusive". So, we nuke the "- 1" to make it
                 // pull in the final element.
 
                 folderPath.subpath(1, folderPath.getNameCount()).each({
-                    printFolder = getFolder(printFolder, it.toString())
+                    uploadFolder = getFolder(uploadFolder, it.toString())
                 })
             }
+
+            return uploadFolder
+
         } catch (BoxAPIException e) {
             println 'Error: Box API could not retrieve or create the subfolders'
             println boxErrorMessage(e)
-
-            tokensLock.release()
-            tokensRAF.close()
-
-            return
         } catch (e) {
             println 'Error: System could not retrieve or create the subfolders'
             println e.toString()
-            tokensLock.release()
-            tokensRAF.close()
-
-            return
         }
+    }
 
+    private static void checkUploadSize(BoxFolder uploadFolder, long totalSize) {
         try {
-            if (cmdLineOpts."total-size" && fileNames.size() > 1) {
-                printFolder.canUpload('PrintToBox' + new Date().toString() + new Date().toString() + 'PrintToBox', totalSize)
-            }
+            uploadFolder.canUpload('PrintToBox' + new Date().toString() + new Date().toString() + 'PrintToBox', totalSize)
         } catch (BoxAPIException e) {
             println 'Error: Total size of the file set is too large'
             println boxErrorMessage(e)
-            tokensLock.release()
-            tokensRAF.close()
-
-            return
         }
+    }
 
+    private static void uploadFiles(files, BoxFolder uploadFolder, cmdLineOpts) {
         try {
-            fileNames.each { fileName, fileProperties ->
+            files.each { fileName, fileProperties ->
                 uploadFileToFolder(
-                        printFolder,
+                        uploadFolder,
                         (FileInputStream) fileProperties.stream,
                         (String) fileProperties.file.getName(),
                         (long) fileProperties.size,
@@ -388,11 +420,8 @@ has expired tokens and OAUTH2 leg 1 needs to be re-run"""
         } catch (e) {
             println 'Error: System could not upload the file to the target folder'
             println e.toString()
-        } finally {
-            tokensLock.release()
-            tokensRAF.close()
         }
-    } //end main()
+    }
 
     private static void uploadFileToFolder(BoxFolder folder, InputStream fileStream, String fileName, long fileSize, String fileSHA1, cmdLineOpts) {
 
@@ -473,93 +502,105 @@ has expired tokens and OAUTH2 leg 1 needs to be re-run"""
     }
 
     //Set up collaboration so that the user owns the folder but the service account can upload to it
-    private static void setupCollaboration(BoxFolder folder, BoxUser.Info myId, String userName) {
+    private static void setupCollaboration(BoxFolder folder, BoxUser.Info myId, String user, String enterpriseDomain) {
 
         Boolean collaborations_exist = false
+        String userName = user + enterpriseDomain
 
-        //Check for existing collaboration
-        for (BoxCollaboration.Info itemInfo : folder.getCollaborations()) {
-            collaborations_exist = true
+        try {
+            //Check for existing collaboration
+            for (BoxCollaboration.Info itemInfo : folder.getCollaborations()) {
+                collaborations_exist = true
 
-            BoxCollaborator.Info boxCollaboratorInfo = itemInfo.getAccessibleBy()
-            BoxUser.Info boxCreatorInfo = itemInfo.getCreatedBy()
-            BoxCollaboration.Role boxCollaborationRole = itemInfo.getRole()
-            BoxCollaboration.Status boxCollaborationStatus = itemInfo.getStatus()
+                BoxCollaborator.Info boxCollaboratorInfo = itemInfo.getAccessibleBy()
+                BoxUser.Info boxCreatorInfo = itemInfo.getCreatedBy()
+                BoxCollaboration.Role boxCollaborationRole = itemInfo.getRole()
+                BoxCollaboration.Status boxCollaborationStatus = itemInfo.getStatus()
 
-            //If pending collaboration, decide what to do
-            //Else, if not a user-type collaboration, skip it (not handling groups)
-            if (boxCollaborationStatus == BoxCollaboration.Status.PENDING &&
-                    boxCollaborationRole == BoxCollaboration.Role.EDITOR &&
-                    boxCreatorInfo.getID() == myId.getID() &&
-                    boxCollaboratorInfo == null
-            ) {
-                println """Warning: User '${userName}' does not appear to exist and the
+                //If pending collaboration, decide what to do
+                //Else, if not a user-type collaboration, skip it (not handling groups)
+                if (boxCollaborationStatus == BoxCollaboration.Status.PENDING &&
+                        boxCollaborationRole == BoxCollaboration.Role.EDITOR &&
+                        boxCreatorInfo.getID() == myId.getID() &&
+                        boxCollaboratorInfo == null
+                ) {
+                    println """Warning: User '${userName}' does not appear to exist and the
 collaboration on folder '${folder.getInfo().getName()}' appears stuck
 in Pending status. The file is likely to be uploaded correctly but the
 usage will be charged to the service account and no other account may
 be able to view the folder."""
-                continue
+                    continue
 
-            } else if (!(boxCollaboratorInfo instanceof BoxUser.Info)) {
-                continue
+                } else if (!(boxCollaboratorInfo instanceof BoxUser.Info)) {
+                    continue
+                }
+
+                BoxUser.Info userInfo = (BoxUser.Info) boxCollaboratorInfo
+
+                //If it's the service account and it's co-owner, demote to editor
+                //If it's the user and the user is set to editor, make user the owner which will automatically
+                // switch the service account to a collaboration editor
+                if (userInfo.getID() == myId.getID() && boxCollaborationRole == BoxCollaboration.Role.CO_OWNER) {
+
+                    itemInfo.setRole(BoxCollaboration.Role.EDITOR)
+                    BoxCollaboration bc = itemInfo.getResource()
+
+                    //FIXME this is a workaround of an API bug. See Git issue 147.
+                    // https://github.com/box/box-java-sdk/issues/147
+                    try {
+                        bc.updateInfo(itemInfo)
+                    } catch (ClassCastException e) {
+                        //do nothing
+                    }
+
+                } else if (userInfo.getLogin() == userName && boxCollaborationRole == BoxCollaboration.Role.EDITOR) {
+
+                    itemInfo.setRole(BoxCollaboration.Role.OWNER)
+                    BoxCollaboration bc = itemInfo.getResource()
+
+                    //FIXME this is a workaround of an API bug. See Git issue 147.
+                    // https://github.com/box/box-java-sdk/issues/147
+                    try {
+                        bc.updateInfo(itemInfo)
+                    } catch (ClassCastException e) {
+                        //do nothing
+                    }
+                }
             }
 
-            BoxUser.Info userInfo = (BoxUser.Info) boxCollaboratorInfo
+            if (!collaborations_exist) {
+                //Probably new folder just created. Create new collaboration with user as the owner.
+                //This will ensure the storage is counted under the user's account.
 
-            //If it's the service account and it's co-owner, demote to editor
-            //If it's the user and the user is set to editor, make user the owner which will automatically
-            // switch the service account to a collaboration editor
-            if (userInfo.getID() == myId.getID() && boxCollaborationRole == BoxCollaboration.Role.CO_OWNER) {
+                //This is the dance recommended by Box.com support.
+                // 1. Create folder (above)
+                // 2. Add user as a collaborator with editor permissions
+                // 3. Set the user as an OWNER in the collaboration. This will demote service account to EDITOR
+                // 4. Commit the change
 
-                itemInfo.setRole(BoxCollaboration.Role.EDITOR)
-                BoxCollaboration bc = itemInfo.getResource()
+                BoxCollaboration.Info newCollaborationInfo = folder.collaborate(userName, BoxCollaboration.Role.EDITOR)
+
+                newCollaborationInfo.setRole(BoxCollaboration.Role.OWNER)
+
+                BoxCollaboration bc = newCollaborationInfo.getResource()
 
                 //FIXME this is a workaround of an API bug. See Git issue 147.
                 // https://github.com/box/box-java-sdk/issues/147
                 try {
-                    bc.updateInfo(itemInfo)
-                } catch (ClassCastException e) {
-                    //do nothing
-                }
-
-            } else if (userInfo.getLogin() == userName && boxCollaborationRole == BoxCollaboration.Role.EDITOR) {
-
-                itemInfo.setRole(BoxCollaboration.Role.OWNER)
-                BoxCollaboration bc = itemInfo.getResource()
-
-                //FIXME this is a workaround of an API bug. See Git issue 147.
-                // https://github.com/box/box-java-sdk/issues/147
-                try {
-                    bc.updateInfo(itemInfo)
+                    bc.updateInfo(newCollaborationInfo)
                 } catch (ClassCastException e) {
                     //do nothing
                 }
             }
-        }
-
-        if (!collaborations_exist) {
-            //Probably new folder just created. Create new collaboration with user as the owner.
-            //This will ensure the storage is counted under the user's account.
-
-            //This is the dance recommended by Box.com support.
-            // 1. Create folder (above)
-            // 2. Add user as a collaborator with editor permissions
-            // 3. Set the user as an OWNER in the collaboration. This will demote service account to EDITOR
-            // 4. Commit the change
-
-            BoxCollaboration.Info newCollaborationInfo = folder.collaborate(userName, BoxCollaboration.Role.EDITOR)
-
-            newCollaborationInfo.setRole(BoxCollaboration.Role.OWNER)
-
-            BoxCollaboration bc = newCollaborationInfo.getResource()
-
-            //FIXME this is a workaround of an API bug. See Git issue 147.
-            // https://github.com/box/box-java-sdk/issues/147
-            try {
-                bc.updateInfo(newCollaborationInfo)
-            } catch (ClassCastException e) {
-                //do nothing
-            }
+        } catch (BoxAPIException e) {
+            println """Error: Could not properly set collaboration on the folder:
+1) Check that user '${userName}' exists in Box.
+2) Check that enterpriseDomain '${enterpriseDomain}' is correct
+3) Ensure the user does not have a folder '${folder.getInfo().getName()}' already"""
+            println boxErrorMessage(e)
+        } catch (e) {
+            println 'Error: Could not set the collaboration on the target folder'
+            println e.toString()
         }
     }
 
