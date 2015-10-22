@@ -17,7 +17,7 @@ import java.util.logging.Level
 import java.util.logging.Logger
 
 final class PrintToBox {
-    private static final String VERSION = '1.4'
+    private static final String VERSION = '2.0'
     private static final String CONFIG_FILE = '/etc/PrintToBox.conf'
     private static final String TOKENS_FILE = '/var/cache/PrintToBox/tokens'
 
