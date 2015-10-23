@@ -33,6 +33,7 @@ final class PrintToBox {
         def configOpts
         def files = [:]
         def tokens
+        def tokensFile
         FileLock tokensLock
         RandomAccessFile tokensRAF
         String folderName
@@ -100,16 +101,20 @@ do not exist. By default, it uploads a new version for existing files.
             folderName = 'PrintToBox ' + userName
         }
 
-        tokens = openTokensFile(tokensRAF, tokensLock, (Integer) configOpts.tokensLockRetries)
+        try {
+            tokensFile = new TokensFileHelper(TOKENS_FILE, (Integer) configOpts.tokensLockRetries)
+            tokens = tokensFile.getTokens()
+        } catch (e) {
+            if (cmdLineOpts.D) e.printStackTrace()
+            return
+        }
 
         if (tokens.accessToken == null && tokens.refreshToken == null && AUTH_CODE.isEmpty()) {
             println """Error: Either '${TOKENS_FILE}' is inaccessible (file permissions)
 or OAUTH2 is not set up. If the tokens file is accessible, either supply
 the authorization code from leg one of OAUTH2 or set up the tokens file
 manually."""
-            //If the tokens file is inaccessible due to permissions, these are null
-            if (tokensLock != null) tokensLock.release();
-            if (tokensRAF != null) tokensRAF.close();
+            tokensFile.close()
             return
         }
 
@@ -135,68 +140,9 @@ manually."""
             uploadFiles(files, printFolder, cmdLineOpts)
 
         } finally {
-            //If the tokens file is inaccessible due to permissions, these are null
-            if (tokensLock != null) tokensLock.release()
-            if (tokensRAF != null) tokensRAF.close()
+            tokensFile.close()
         }
     } //end main()
-
-    private static def openTokensFile(RandomAccessFile tokensRAF, FileLock tokensLock, Integer retries) {
-
-        def tokens = [:]
-
-        try {
-            tokensRAF = new RandomAccessFile(TOKENS_FILE, "rw");
-
-            //The program takes about 6 wall seconds to complete. Depending on the random sleep times chosen,
-            //1000 loops gives the program between 16 and 100 minutes to complete, but probably ~ 1 hour.
-            (1..retries).find {
-                tokensLock = tokensRAF.getChannel().tryLock()
-                if (tokensLock == null) {
-                    Random r = new Random()
-                    sleep(1000 + r.nextInt(5000))
-                    return false
-                } else {
-                    return true
-                }
-            }
-
-            if (tokensLock == null) {
-                println "Error: Cannot lock tokens file after ${retries} tries. " +
-                        'Consider setting the ("tokensLockRetries": 1234) option in the config file.'
-                tokensRAF.close()
-                return
-            }
-
-            //Can't use an InputStream on the channel because it releases the lock and closes the file handle
-            byte[] buf = new byte[tokensRAF.length().toInteger()]
-
-            int bytes_read = tokensRAF.read(buf, 0, tokensRAF.length().toInteger())
-
-            tokens = new JsonSlurper().parse(buf)
-
-            assert tokens.accessToken instanceof String
-            assert tokens.refreshToken instanceof String
-
-            return tokens
-
-        } catch (AssertionError e) {
-            println 'Error: Invalid tokens file: ' + """${TOKENS_FILE}
-""" + 'Expected format (JSON):' + """
-{
-  "accessToken": "abcdefghijklmnopqrstuvwxyz123456",
-  "refreshToken": "abcdefghijklmnopqrstuvwxyz123456"
-}"""
-            tokensLock.release()
-            tokensRAF.close()
-            //FIXME move to main() don't exit here
-            System.exit()
-
-        } catch (e) {
-            // Do nothing, probably FileNotFound
-            tokens = [accessToken: null, refreshToken: null]
-        }
-    }
 
     private static long setFilesProperties(files, differ) {
 
@@ -565,12 +511,5 @@ be able to view the folder."""
             println 'Error: Could not set the collaboration on the target folder'
             println e.toString()
         }
-    }
-
-    private static void writeTokensToFile(RandomAccessFile tokensRAF, tokens) {
-        def jsonOutput = JsonOutput.toJson(tokens)
-        byte[] jsonBytes = JsonOutput.prettyPrint(jsonOutput).getBytes()
-        tokensRAF.seek(0)
-        tokensRAF.write(jsonBytes, 0, jsonBytes.length)
     }
 }
