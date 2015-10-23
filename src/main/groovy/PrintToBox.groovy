@@ -52,6 +52,7 @@ do not exist. By default, it uploads a new version for existing files.
 
         cli.a(longOpt:'auth-code', args: 1, argName:'auth_code', 'Auth code from OAUTH2 leg one')
         cli.d(longOpt:'differ', 'Upload new version only if the file differs')
+        cli.D(longOpt:'debug', 'Enable debugging')
         cli.f(longOpt:'folder', args: 1, argName:'folder', 'Box folder path. Top-level should be unique. Default: "PrintToBox <username>"')
         cli.h(longOpt:'help', 'Print this help text')
         cli.R(longOpt:'replace', 'If the filename already exists in Box, delete it (and all versions) and replace it with this file')
@@ -84,7 +85,12 @@ do not exist. By default, it uploads a new version for existing files.
         if (cmdLineOpts.a)
             AUTH_CODE = cmdLineOpts.a
 
-        configOpts = getConfigOpts(CONFIG_FILE)
+        try {
+            configOpts = new ConfigHelper(CONFIG_FILE)
+        } catch (e) {
+            if (cmdLineOpts.D) e.printStackTrace()
+            return
+        }
 
         if (cmdLineOpts.f) {
             folderName = cmdLineOpts.f
@@ -134,49 +140,6 @@ manually."""
             if (tokensRAF != null) tokensRAF.close()
         }
     } //end main()
-
-    private static def getConfigOpts(String configFile) {
-
-        def configOpts = [:]
-
-        try {
-            //The LAX parser is the only one that supports comments (/* */) in JSON
-            //However, it returns a horrible map type. Convert it here to a normal Groovy map.
-            def slurpOpts = new JsonSlurper().setType(JsonParserType.LAX).parse(new File(configFile))
-            slurpOpts.each {k, v -> configOpts.put(k, slurpOpts.get(k))}
-
-            assert configOpts.clientId instanceof String
-            assert configOpts.clientSecret instanceof String
-            assert configOpts.enterpriseDomain instanceof String
-            assert (!configOpts.tokensLockRetries || configOpts.tokensLockRetries instanceof Integer)
-            assert (!configOpts.baseFolderName || configOpts.baseFolderName instanceof String)
-
-            if (!configOpts.tokensLockRetries)
-                configOpts.tokensLockRetries = 1000
-
-            return configOpts
-
-        } catch (AssertionError e) {
-            println 'Error: Invalid config file: ' + """${configFile}
-""" + 'Expected format (JSON):' + """
-{
-  "enterpriseDomain": "@example.com",
-  "clientId": "abcdefghijklmnopqrstuvwxyz123456",
-  "clientSecret": "abcdefghijklmnopqrstuvwxyz123456"
-}
-
-Optional keys:
-  "tokensLockRetries": 1000 (Default)
-  "baseFolderName": "PrintToBox" (Default)"""
-            //FIXME exit in main() not here
-            System.exit()
-        } catch (e) {
-            println e.toString()
-            println e.getCause().toString()
-            //FIXME exit in main() not here
-            System.exit()
-        }
-    }
 
     private static def openTokensFile(RandomAccessFile tokensRAF, FileLock tokensLock, Integer retries) {
 
