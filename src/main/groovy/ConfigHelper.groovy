@@ -4,20 +4,25 @@ import groovy.json.JsonSlurper
 final class ConfigHelper implements Map {
     @Delegate Map inner = [:]
 
-    ConfigHelper() {}
+    private String ConfigFileName
 
     ConfigHelper(String configFile) {
-        readConfig(configFile)
+        ConfigFileName = configFile
+        readConfig()
     }
 
-    def readConfig(String configFile) throws Exception {
+    public String getConfigFileName() {
+        return ConfigFileName
+    }
+
+    private void readConfig() throws Exception {
 
         def myOpts = [:]
 
         try {
             //The LAX parser is the only one that supports comments (/* */) in JSON
             //However, it returns a horrible map type. Convert it here to a normal Groovy map.
-            def slurpOpts = new JsonSlurper().setType(JsonParserType.LAX).parse(new File(configFile))
+            def slurpOpts = new JsonSlurper().setType(JsonParserType.LAX).parse(new File(ConfigFileName))
 
             slurpOpts.each {k, v -> myOpts.put(k, slurpOpts.get(k))}
 
@@ -33,7 +38,7 @@ final class ConfigHelper implements Map {
             this.putAll(myOpts.entrySet())
 
         } catch (AssertionError e) {
-            println 'Error: Invalid config file: ' + """${configFile}
+            println 'Error: Invalid config file: ' + """${ConfigFileName}
 """ + 'Expected format (JSON):' + """
 {
   "enterpriseDomain": "@example.com",

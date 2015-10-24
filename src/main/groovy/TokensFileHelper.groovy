@@ -36,10 +36,14 @@ final class TokensFileHelper {
 
             int bytes_read = tokensRAF.read(buf, 0, tokensRAF.length().toInteger())
 
-            tokens = new JsonSlurper().parse(buf)
+            def myTokens = new JsonSlurper().parse(buf)
 
-            assert tokens.accessToken instanceof String
-            assert tokens.refreshToken instanceof String
+            assert myTokens.accessToken instanceof String
+            assert myTokens.refreshToken instanceof String
+
+            tokens.accessToken = myTokens.accessToken
+            tokens.refreshToken = myTokens.refreshToken
+            tokens.getTokensFileName = { return TokensFileName }
 
         } catch (AssertionError e) {
             println 'Error: Invalid tokens file: ' + """${TokensFileName}
@@ -83,10 +87,25 @@ final class TokensFileHelper {
     }
 
     def writeTokensToFile() {
-        def jsonOutput = JsonOutput.toJson(tokens)
+        writeTokensToFile(tokens)
+    }
+
+    def writeTokensToFile(myTokens) throws Exception {
+        def writeTokens = [:]
+        try {
+            assert myTokens.accessToken instanceof String
+            assert myTokens.refreshToken instanceof String
+            writeTokens.accessToken = myTokens.accessToken
+            writeTokens.refreshToken = myTokens.refreshToken
+        } catch (AssertionError e) {
+            println 'Supplied tokens are invalid. Not writing to disk.'
+            throw e
+        }
+        def jsonOutput = JsonOutput.toJson(writeTokens)
         byte[] jsonBytes = JsonOutput.prettyPrint(jsonOutput).getBytes()
         tokensRAF.seek(0)
         tokensRAF.write(jsonBytes, 0, jsonBytes.length)
+        tokensRAF.setLength(jsonBytes.length)
     }
 
 }
