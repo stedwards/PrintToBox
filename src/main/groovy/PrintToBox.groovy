@@ -1,18 +1,5 @@
-import com.box.sdk.BoxAPIConnection
-import com.box.sdk.BoxAPIException
-import com.box.sdk.BoxCollaboration
-import com.box.sdk.BoxCollaborator
-import com.box.sdk.BoxFile
 import com.box.sdk.BoxFolder
-import com.box.sdk.BoxItem
 import com.box.sdk.BoxUser
-import groovy.json.JsonSlurper
-import groovy.json.JsonOutput
-import groovy.json.JsonParserType
-import java.nio.channels.FileLock
-import java.nio.file.Path
-import java.security.DigestInputStream
-import java.security.MessageDigest
 import java.util.logging.Level
 import java.util.logging.Logger
 
@@ -22,20 +9,17 @@ final class PrintToBox {
     private static final String TOKENS_FILE = '/var/cache/PrintToBox/tokens'
 
     static void main(String[] args) {
-        BoxAPIConnection api
         BoxUser.Info userInfo
         BoxFolder rootFolder
         BoxFolder collaborationFolder
         BoxFolder printFolder
-        long totalSize = 0l
+        long totalSize
         def cli
         def cmdLineOpts
         def configOpts
         def files = [:]
         def tokens
         def tokensFile
-        FileLock tokensLock
-        RandomAccessFile tokensRAF
         String folderName
         String userName
         String AUTH_CODE = ''
@@ -79,6 +63,7 @@ do not exist. By default, it uploads a new version for existing files.
         }
 
         userName = cmdLineOpts.arguments()[0]
+
         cmdLineOpts.arguments()[1..-1].each { k ->
             files[k] = [:]
         }
