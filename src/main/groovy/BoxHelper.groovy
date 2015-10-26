@@ -2,22 +2,90 @@ import com.box.sdk.BoxAPIConnection
 import com.box.sdk.BoxAPIException
 import com.box.sdk.BoxCollaboration
 import com.box.sdk.BoxCollaborator
+import com.box.sdk.BoxDeveloperEditionAPIConnection
+import com.box.sdk.EncryptionAlgorithm
 import com.box.sdk.BoxFile
 import com.box.sdk.BoxFolder
 import com.box.sdk.BoxItem
 import com.box.sdk.BoxUser
+import com.box.sdk.JWTEncryptionPreferences
+
 import groovy.json.JsonOutput
 
+import java.nio.file.Files
+import java.nio.file.Paths
 import java.nio.file.Path
 
 final class BoxHelper {
 
-    private BoxAPIConnection api
+    //private BoxAPIConnection api
+    private BoxDeveloperEditionAPIConnection api
 
     BoxHelper() {}
 
     BoxHelper(configOpts, String authCode, tokens) {
         connect(configOpts, authCode, tokens)
+    }
+
+    BoxHelper(configOpts) {
+        connect(configOpts)
+    }
+
+    public String createAppUser(configOpts, String userName) {
+        try {
+
+            println 'GOT HERE: ' + configOpts.enterpriseId + configOpts.keyFileName + configOpts.keyId + configOpts.keyPassword
+
+            String privateKey = new String(Files.readAllBytes(Paths.get((String)configOpts.keyFileName)))
+
+            JWTEncryptionPreferences encryptionPref = new JWTEncryptionPreferences()
+            encryptionPref.setPublicKeyID((String) configOpts.keyId)
+            encryptionPref.setPrivateKey(privateKey)
+            encryptionPref.setPrivateKeyPassword((String) configOpts.keyPassword)
+            encryptionPref.setEncryptionAlgorithm(EncryptionAlgorithm.RSA_SHA_256)
+
+            api = BoxDeveloperEditionAPIConnection.getAppEnterpriseConnection(
+                    (String) configOpts.enterpriseId,
+                    (String) configOpts.clientId,
+                    (String) configOpts.clientSecret,
+                    encryptionPref)
+
+            BoxUser.Info user = BoxUser.createAppUser(api, userName);
+            return user.getID()
+
+        } catch (BoxAPIException e) {
+            println """Error: Could not create AppAuth user. Usually, this means that
+${configOpts.getConfigFileName()} is not configured correctly
+"""
+            println boxErrorMessage(e)
+            throw e
+        }
+    }
+
+    public void connect(configOpts) {
+        try {
+            String privateKey = new String(Files.readAllBytes(Paths.get(configOpts.keyFileName)))
+
+            JWTEncryptionPreferences encryptionPref = new JWTEncryptionPreferences()
+            encryptionPref.setPublicKeyID(configOpts.keyId)
+            encryptionPref.setPrivateKey(privateKey)
+            encryptionPref.setPrivateKeyPassword(configOpts.keyPassword)
+            encryptionPref.setEncryptionAlgorithm(EncryptionAlgorithm.RSA_SHA_256)
+
+            api = BoxDeveloperEditionAPIConnection.getAppUserConnection(
+                    (String) configOpts.appUserId,
+                    (String) configOpts.clientId,
+                    (String) configOpts.clientSecret,
+                    encryptionPref)
+
+        } catch (BoxAPIException e) {
+            println """Error: Could not connect to Box API. Usually, this means one of:
+1) ${configOpts.getConfigFileName()} is not configured correctly
+2) FIXME FIXME FIXME has an invalid user and needs to be regenerated
+"""
+            println boxErrorMessage(e)
+            throw e
+        }
     }
 
     public void connect(configOpts, String authCode, tokens) {

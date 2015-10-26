@@ -24,8 +24,6 @@ final class PrintToBox {
         String userName
         String AUTH_CODE = ''
 
-        // Turn off logging to prevent polluting the output.
-        Logger.getLogger("com.box.sdk").setLevel(Level.OFF);
         cli = new CliBuilder(usage: """
 PrintToBox [<options>] <username> <filename> [<filename 2>...]
 
@@ -36,6 +34,7 @@ do not exist. By default, it uploads a new version for existing files.
 """, header: 'Options:')
 
         cli.a(longOpt:'auth-code', args: 1, argName:'auth_code', 'Auth code from OAUTH2 leg one')
+        cli.C(longOpt:'create-user', args: 1, argName:'create_user', 'Create AppAuth <username> and exit')
         cli.d(longOpt:'differ', 'Upload new version only if the file differs')
         cli.D(longOpt:'debug', 'Enable debugging')
         cli.f(longOpt:'folder', args: 1, argName:'folder', 'Box folder path. Top-level should be unique. Default: "PrintToBox <username>"')
@@ -52,13 +51,37 @@ do not exist. By default, it uploads a new version for existing files.
             return
         }
 
-        if (cmdLineOpts.h || cmdLineOpts.arguments().size() < 2) {
+        if (cmdLineOpts.h) {
             cli.usage()
             return
         }
 
         if (cmdLineOpts.R && cmdLineOpts.U) {
             println 'Error: -R/--replace and -U/--no-update are mutually exclusive options. See --help for details.'
+            return
+        }
+
+        try {
+            configOpts = new ConfigHelper(CONFIG_FILE)
+        } catch (e) {
+            if (cmdLineOpts.D) e.printStackTrace()
+            return
+        }
+
+        if (cmdLineOpts.C) {
+            try {
+                BoxHelper boxHelper = new BoxHelper()
+                String userId = boxHelper.createAppUser(configOpts, (String) cmdLineOpts.C)
+                println """Created user. Add this to ${CONFIG_FILE}:
+"appUserId": "${userId}" """
+            } catch (e) {
+                if (cmdLineOpts.D) e.printStackTrace()
+            }
+            return
+        }
+
+        if (cmdLineOpts.arguments().size() < 2) {
+            cli.usage()
             return
         }
 
@@ -71,13 +94,6 @@ do not exist. By default, it uploads a new version for existing files.
         if (cmdLineOpts.a)
             AUTH_CODE = cmdLineOpts.a
 
-        try {
-            configOpts = new ConfigHelper(CONFIG_FILE)
-        } catch (e) {
-            if (cmdLineOpts.D) e.printStackTrace()
-            return
-        }
-
         if (cmdLineOpts.f) {
             folderName = cmdLineOpts.f
         } else if (configOpts.baseFolderName) {
@@ -86,7 +102,7 @@ do not exist. By default, it uploads a new version for existing files.
             folderName = 'PrintToBox ' + userName
         }
 
-        try {
+/*        try {
             tokensFile = new TokensFileHelper(TOKENS_FILE, (Integer) configOpts.tokensLockRetries)
             tokens = tokensFile.getTokens()
         } catch (e) {
@@ -102,14 +118,15 @@ manually."""
             tokensFile.close()
             return
         }
-
+*/
         try {
             totalSize = new FilesHelper().setFilesProperties(files, cmdLineOpts."differ")
 
-            BoxHelper boxHelper = new BoxHelper(configOpts, AUTH_CODE, tokens)
+            BoxHelper boxHelper = new BoxHelper(configOpts)
+            // BoxHelper boxHelper = new BoxHelper(configOpts, AUTH_CODE, tokens)
 
-            boxHelper.updateTokens(tokens)
-            tokensFile.writeTokensToFile(tokens)
+            // boxHelper.updateTokens(tokens)
+            // tokensFile.writeTokensToFile(tokens)
 
             userInfo            = boxHelper.getAPIUserInfo()
             rootFolder          = boxHelper.getRootFolder()
@@ -127,8 +144,8 @@ manually."""
 
         } catch (e) {
             if (cmdLineOpts.D) e.printStackTrace()
-        } finally {
+        } /* finally {
             tokensFile.close()
-        }
+        } */
     } //end main()
 }
