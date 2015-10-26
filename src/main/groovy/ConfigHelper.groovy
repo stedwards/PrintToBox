@@ -29,11 +29,13 @@ final class ConfigHelper implements Map {
             assert myOpts.clientId instanceof String
             assert myOpts.clientSecret instanceof String
             assert myOpts.enterpriseDomain instanceof String
-            assert (!myOpts.tokensLockRetries || myOpts.tokensLockRetries instanceof Integer)
-            assert (!myOpts.baseFolderName || myOpts.baseFolderName instanceof String)
+            assert myOpts.enterpriseId instanceof String
+            assert myOpts.keyId instanceof String
+            assert myOpts.keyFileName instanceof String
+            assert myOpts.keyPassword instanceof String
 
-            if (!myOpts.tokensLockRetries)
-                myOpts.tokensLockRetries = 1000
+            assert (!myOpts.appUserId || myOpts.appUserId instanceof String)
+            assert (!myOpts.baseFolderName || myOpts.baseFolderName instanceof String)
 
             this.putAll(myOpts.entrySet())
 
@@ -42,12 +44,16 @@ final class ConfigHelper implements Map {
 """ + 'Expected format (JSON):' + """
 {
   "enterpriseDomain": "@example.com",
+  "enterpriseId": "123456789",
   "clientId": "abcdefghijklmnopqrstuvwxyz123456",
-  "clientSecret": "abcdefghijklmnopqrstuvwxyz123456"
+  "clientSecret": "abcdefghijklmnopqrstuvwxyz123456",
+  "keyId": "987654321",
+  "keyFileName": "/etc/PrintToBox_private_key.pem",
+  "keyPassword": "aoeu1234aoeu1234aoeu1234",
+  "appUserId": "12349876"
 }
 
 Optional keys:
-  "tokensLockRetries": 1000 (Default)
   "baseFolderName": "PrintToBox" (Default)"""
 
             throw e

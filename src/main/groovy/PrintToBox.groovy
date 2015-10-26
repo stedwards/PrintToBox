@@ -27,7 +27,7 @@ do not exist. By default, it uploads a new version for existing files.
 
 """, header: 'Options:')
 
-        cli.C(longOpt:'create-user', args: 1, argName:'create_user', 'Create AppAuth <username> and exit')
+        cli.C(longOpt:'create-user', args: 1, argName:'username', 'Create AppUser <username> and exit')
         cli.d(longOpt:'differ', 'Upload new version only if the file differs')
         cli.D(longOpt:'debug', 'Enable debugging')
         cli.f(longOpt:'folder', args: 1, argName:'folder', 'Box folder path. Top-level should be unique. Default: "PrintToBox <username>"')
