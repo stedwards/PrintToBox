@@ -37,7 +37,6 @@ ospackage  {
     permissionGroup = 'root'
     requires('coreutils')
     preInstall = file('preInstall.sh')
-    postInstall = file('postInstall.sh')
     postUninstall = file('postUninstall.sh')
 
     from ('build/install/PrintToBox/lib') {
