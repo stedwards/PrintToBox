@@ -1,4 +1,3 @@
-import com.box.sdk.BoxAPIConnection
 import com.box.sdk.BoxAPIException
 import com.box.sdk.BoxCollaboration
 import com.box.sdk.BoxCollaborator
@@ -18,14 +17,9 @@ import java.nio.file.Path
 
 final class BoxHelper {
 
-    //private BoxAPIConnection api
     private BoxDeveloperEditionAPIConnection api
 
     BoxHelper() {}
-
-    BoxHelper(configOpts, String authCode, tokens) {
-        connect(configOpts, authCode, tokens)
-    }
 
     BoxHelper(configOpts) {
         connect(configOpts)
@@ -33,24 +27,16 @@ final class BoxHelper {
 
     public String createAppUser(configOpts, String userName) {
         try {
-
-            println 'GOT HERE: ' + configOpts.enterpriseId + configOpts.keyFileName + configOpts.keyId + configOpts.keyPassword
-
-            String privateKey = new String(Files.readAllBytes(Paths.get((String)configOpts.keyFileName)))
-
-            JWTEncryptionPreferences encryptionPref = new JWTEncryptionPreferences()
-            encryptionPref.setPublicKeyID((String) configOpts.keyId)
-            encryptionPref.setPrivateKey(privateKey)
-            encryptionPref.setPrivateKeyPassword((String) configOpts.keyPassword)
-            encryptionPref.setEncryptionAlgorithm(EncryptionAlgorithm.RSA_SHA_256)
+            JWTEncryptionPreferences encryptionPreferences = getEncryptionPreferences(configOpts)
 
             api = BoxDeveloperEditionAPIConnection.getAppEnterpriseConnection(
                     (String) configOpts.enterpriseId,
                     (String) configOpts.clientId,
                     (String) configOpts.clientSecret,
-                    encryptionPref)
+                    encryptionPreferences)
 
             BoxUser.Info user = BoxUser.createAppUser(api, userName);
+
             return user.getID()
 
         } catch (BoxAPIException e) {
@@ -64,64 +50,33 @@ ${configOpts.getConfigFileName()} is not configured correctly
 
     public void connect(configOpts) {
         try {
-            String privateKey = new String(Files.readAllBytes(Paths.get(configOpts.keyFileName)))
-
-            JWTEncryptionPreferences encryptionPref = new JWTEncryptionPreferences()
-            encryptionPref.setPublicKeyID(configOpts.keyId)
-            encryptionPref.setPrivateKey(privateKey)
-            encryptionPref.setPrivateKeyPassword(configOpts.keyPassword)
-            encryptionPref.setEncryptionAlgorithm(EncryptionAlgorithm.RSA_SHA_256)
+            JWTEncryptionPreferences encryptionPreferences = getEncryptionPreferences(configOpts)
 
             api = BoxDeveloperEditionAPIConnection.getAppUserConnection(
                     (String) configOpts.appUserId,
                     (String) configOpts.clientId,
                     (String) configOpts.clientSecret,
-                    encryptionPref)
+                    encryptionPreferences)
 
         } catch (BoxAPIException e) {
-            println """Error: Could not connect to Box API. Usually, this means one of:
-1) ${configOpts.getConfigFileName()} is not configured correctly
-2) FIXME FIXME FIXME has an invalid user and needs to be regenerated
+            println """Error: Could not connect to Box API. Usually, this means that
+${configOpts.getConfigFileName()} is not configured correctly
 """
             println boxErrorMessage(e)
             throw e
         }
     }
 
-    public void connect(configOpts, String authCode, tokens) {
-        try {
-            if (!authCode.isEmpty()) {
-                api = new BoxAPIConnection(
-                        (String) configOpts.clientId,
-                        (String) configOpts.clientSecret,
-                        authCode)
-            } else {
-                api = new BoxAPIConnection(
-                        (String) configOpts.clientId,
-                        (String) configOpts.clientSecret,
-                        (String) tokens.accessToken,
-                        (String) tokens.refreshToken)
-            }
-        } catch (BoxAPIException e) {
-            println """Error: Could not connect to Box API. Usually, this means one of:
-1) ${configOpts.getConfigFileName()} is not configured correctly
-2) ${tokens.getTokensFileName()} has expired tokens and OAUTH2 leg 1 needs to be re-run
-"""
-            println boxErrorMessage(e)
-            throw e
-        }
-    }
+    private JWTEncryptionPreferences getEncryptionPreferences(configOpts) {
+        String privateKey = new String(Files.readAllBytes(Paths.get((String)configOpts.keyFileName)))
 
-    public void updateTokens(tokens) {
-        try {
-            tokens.accessToken = api.getAccessToken()
-            tokens.refreshToken = api.getRefreshToken()
-        } catch (BoxAPIException e) {
-            println """Error: Could not get new tokens. Most likely, ${tokens.getTokensFileName()}
-has expired tokens and OAUTH2 leg 1 needs to be re-run"""
-            println boxErrorMessage(e)
-            throw e
-        }
+        JWTEncryptionPreferences encryptionPref = new JWTEncryptionPreferences()
+        encryptionPref.setPublicKeyID((String) configOpts.keyId)
+        encryptionPref.setPrivateKey(privateKey)
+        encryptionPref.setPrivateKeyPassword((String) configOpts.keyPassword)
+        encryptionPref.setEncryptionAlgorithm(EncryptionAlgorithm.RSA_SHA_256)
+
+        return encryptionPref
     }
 
     public BoxUser.Info getAPIUserInfo() {
@@ -429,4 +384,3 @@ be able to view the folder."""
 
 
 }
-

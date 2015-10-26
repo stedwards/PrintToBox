@@ -57,13 +57,6 @@ ospackage  {
         permissionGroup 'printtobox'
         fileMode 0640
     }
-    from ('tokens') {
-        fileType CONFIG | NOREPLACE
-        into '/var/cache/PrintToBox'
-        user 'root'
-        permissionGroup 'printtobox'
-        fileMode 0660
-    }
     from (['LICENSE','README.md']) {
         into '/usr/share/doc/PrintToBox'
         user 'root'
@@ -73,7 +66,6 @@ ospackage  {
 
 task createDeb(type: Deb, dependsOn: [installApp]) {
     configurationFile('''/etc/PrintToBox.conf
-/var/cache/PrintToBox/tokens
 ''')
     requires('openjdk-7-jre-headless | java7-runtime-headless | jre')
     requires('passwd')
