@@ -14,20 +14,23 @@ final class FilesHelper {
                 File file = new File((String)fileName)
                 long fileSize = file.length()
                 totalSize += fileSize
-                FileInputStream fileStream = new FileInputStream(file)
+
+                MarkableFileInputStream fileInputStream = new MarkableFileInputStream(file)
+                fileInputStream.mark(Integer.MAX_VALUE)
 
                 if (differ) {
                     MessageDigest sha = MessageDigest.getInstance("SHA1");
-                    DigestInputStream digestInputStream = new DigestInputStream(fileStream, sha);
+                    DigestInputStream digestInputStream = new DigestInputStream(fileInputStream, sha);
                     byte[] b = new byte[32768]
                     while (digestInputStream.read(b) != -1) ;
                     fileProperties.SHA1 = sprintf("%040x", new BigInteger(1, sha.digest()))
-                    fileStream = new FileInputStream(file)
+                    fileInputStream.reset()
+                    fileInputStream.mark(Integer.MAX_VALUE)
                 }
 
                 fileProperties.file = file
                 fileProperties.size = fileSize
-                fileProperties.stream = fileStream
+                fileProperties.stream = fileInputStream
             }
 
             return totalSize

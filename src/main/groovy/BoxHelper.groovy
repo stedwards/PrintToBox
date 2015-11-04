@@ -49,21 +49,42 @@ ${configOpts.getConfigFileName()} is not configured correctly
     }
 
     public void connect(configOpts) {
-        try {
-            JWTEncryptionPreferences encryptionPreferences = getEncryptionPreferences(configOpts)
 
-            api = BoxDeveloperEditionAPIConnection.getAppUserConnection(
-                    (String) configOpts.appUserId,
-                    (String) configOpts.clientId,
-                    (String) configOpts.clientSecret,
-                    encryptionPreferences)
+        int i = 0
+        JWTEncryptionPreferences encryptionPreferences = getEncryptionPreferences(configOpts)
 
-        } catch (BoxAPIException e) {
-            println """Error: Could not connect to Box API. Usually, this means that
+        while (i < configOpts.networkRetries)
+        {
+            try {
+                api = BoxDeveloperEditionAPIConnection.getAppUserConnection(
+                        (String) configOpts.appUserId,
+                        (String) configOpts.clientId,
+                        (String) configOpts.clientSecret,
+                        encryptionPreferences)
+
+                api.setMaxRequestAttempts((int) configOpts.networkRetries)
+
+                return
+
+            } catch (BoxAPIException e) {
+
+                String errorMessage = boxErrorMessage(e)
+
+                if (errorMessage.contains("Current date/time MUST be before") ||
+                    errorMessage.contains("Please check the 'jti' claim") ||
+                    errorMessage.contains("rate_limit_exceeded")) {
+
+                    sleep(1000)
+                    i++
+                    continue
+                }
+
+                println """Error: Could not connect to Box API. Usually, this means that
 ${configOpts.getConfigFileName()} is not configured correctly
 """
-            println boxErrorMessage(e)
-            throw e
+                println errorMessage
+                throw e
+            }
         }
     }
 
@@ -181,7 +202,7 @@ ${configOpts.getConfigFileName()} is not configured correctly
             files.each { fileName, fileProperties ->
                 uploadFileToFolder(
                         uploadFolder,
-                        (FileInputStream) fileProperties.stream,
+                        (MarkableFileInputStream) fileProperties.stream,
                         (String) fileProperties.file.getName(),
                         (long) fileProperties.size,
                         (String) fileProperties.SHA1,
@@ -199,13 +220,13 @@ ${configOpts.getConfigFileName()} is not configured correctly
         }
     }
 
-    public void uploadFileToFolder(BoxFolder folder, InputStream fileStream, String fileName, long fileSize, String fileSHA1, cmdLineOpts) {
+    public void uploadFileToFolder(BoxFolder folder, MarkableFileInputStream fileStream, String fileName, long fileSize, String fileSHA1, cmdLineOpts) {
 
         // By definition, there is an explicit race condition on checking if a file exists and then
         // uploading afterward. This is how Box works. There is no way to atomically send a file
         // and have Box rename it automatically if there is a conflict.
         //
-        //For each item in the root folder:
+        //For each item in the folder:
         // If --no-update is set and it's a file and it is named the same thing
         //     then return
         // If --differ is set and it's a file and named the same and the SHA1 hash is equivalent
@@ -217,7 +238,7 @@ ${configOpts.getConfigFileName()} is not configured correctly
         // If it's a folder and it is named the same thing, name the upload "file + TODAY"
         //     and return
         //
-        // Otherwise, upload the file to the root folder
+        // Otherwise, upload the file to the folder
 
         for (BoxItem.Info itemInfo : folder) {
             if (cmdLineOpts."no-update" && itemInfo instanceof BoxFile.Info && itemInfo.getName() == fileName) {
@@ -233,7 +254,7 @@ ${configOpts.getConfigFileName()} is not configured correctly
                 return
             } else if (itemInfo instanceof BoxFile.Info && itemInfo.getName() == fileName) {
                 itemInfo.getResource().canUploadVersion(fileName, fileSize, folder.getID())
-                itemInfo.getResource().uploadVersion(fileStream)
+                itemInfo.getResource().uploadVersion(fileStream, null, fileSize, null)
                 return
             } else if (itemInfo instanceof BoxFolder.Info && itemInfo.getName() == fileName) {
                 String newFileName = fileName + ' ' + new Date()

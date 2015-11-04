@@ -36,6 +36,9 @@ final class ConfigHelper implements Map {
 
             assert (!myOpts.appUserId || myOpts.appUserId instanceof String)
             assert (!myOpts.baseFolderName || myOpts.baseFolderName instanceof String)
+            assert (!myOpts.networkRetries || myOpts.networkRetries instanceof Integer)
+
+            myOpts.networkRetries = myOpts.networkRetries ?: 10
 
             this.putAll(myOpts.entrySet())
 
