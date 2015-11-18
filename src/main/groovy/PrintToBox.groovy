@@ -74,7 +74,7 @@ do not exist. By default, it uploads a new version for existing files.
 
         if (cmdLineOpts.R && cmdLineOpts.U) {
             println 'Error: -R/--replace and -U/--no-update are mutually exclusive options. See --help for details.'
-            return
+            System.exit(1)
         }
 
         userName = cmdLineOpts.arguments()[0]
@@ -110,11 +110,11 @@ Optional keys:
   "tokensLockRetries": 1000 (Default)
   "baseFolderName": "PrintToBox" (Default)"""
 
-            return
+            System.exit(1)
         } catch (e) {
             println e.toString()
             println e.getCause().toString()
-            return
+            System.exit(1)
         }
 
         if (!configOpts.tokensLockRetries)
@@ -148,7 +148,7 @@ Optional keys:
                 println "Error: Cannot lock tokens file after ${configOpts.tokensLockRetries} tries. " +
                         'Consider setting the ("tokensLockRetries": 1234) option in the config file.'
                 tokensRAF.close()
-                return
+                System.exit(1)
             }
 
             //Can't use an InputStream on the channel because it releases the lock and closes the file handle
@@ -169,7 +169,7 @@ Optional keys:
 }"""
             tokensLock.release()
             tokensRAF.close()
-            return
+            System.exit(1)
         } catch (e) {
             // Do nothing, probably FileNotFound
             tokens = [accessToken: null, refreshToken: null]
@@ -200,7 +200,7 @@ Optional keys:
             //If the tokens file is inaccessible due to permissions, these are null
             if (tokensLock != null) tokensLock.release();
             if (tokensRAF != null) tokensRAF.close()
-            return
+            System.exit(1)
         }
 
         if (tokens.accessToken == null && tokens.refreshToken == null && AUTH_CODE.isEmpty()) {
@@ -211,7 +211,7 @@ manually."""
             //If the tokens file is inaccessible due to permissions, these are null
             if (tokensLock != null) tokensLock.release();
             if (tokensRAF != null) tokensRAF.close();
-            return
+            System.exit(1)
         }
 
         try {
@@ -230,7 +230,7 @@ manually."""
             tokensLock.release()
             tokensRAF.close()
 
-            return
+            System.exit(1)
         }
 
         try {
@@ -248,7 +248,7 @@ has expired tokens and OAUTH2 leg 1 needs to be re-run"""
             tokensLock.release()
             tokensRAF.close()
 
-            return
+            System.exit(1)
         } catch (e) {
             println 'Error: Could not get new tokens and write them to disk'
             println e.toString()
@@ -256,7 +256,7 @@ has expired tokens and OAUTH2 leg 1 needs to be re-run"""
             tokensLock.release()
             tokensRAF.close()
 
-            return
+            System.exit(1)
         }
 
         try {
@@ -270,7 +270,7 @@ has expired tokens and OAUTH2 leg 1 needs to be re-run"""
             tokensLock.release()
             tokensRAF.close()
 
-            return
+            System.exit(1)
         }
 
         try {
@@ -293,14 +293,14 @@ has expired tokens and OAUTH2 leg 1 needs to be re-run"""
             tokensLock.release()
             tokensRAF.close()
 
-            return
+            System.exit(1)
         } catch (e) {
             println 'Error: Could not create or access the target folder'
             println e.toString()
             tokensLock.release()
             tokensRAF.close()
 
-            return
+            System.exit(1)
         }
 
         try {
@@ -316,14 +316,14 @@ has expired tokens and OAUTH2 leg 1 needs to be re-run"""
             tokensLock.release()
             tokensRAF.close()
 
-            return
+            System.exit(1)
         } catch (e) {
             println 'Error: Could not set the collaboration on the target folder'
             println e.toString()
             tokensLock.release()
             tokensRAF.close()
 
-            return
+            System.exit(1)
         }
 
         try {
@@ -348,14 +348,14 @@ has expired tokens and OAUTH2 leg 1 needs to be re-run"""
             tokensLock.release()
             tokensRAF.close()
 
-            return
+            System.exit(1)
         } catch (e) {
             println 'Error: System could not retrieve or create the subfolders'
             println e.toString()
             tokensLock.release()
             tokensRAF.close()
 
-            return
+            System.exit(1)
         }
 
         try {
@@ -368,7 +368,7 @@ has expired tokens and OAUTH2 leg 1 needs to be re-run"""
             tokensLock.release()
             tokensRAF.close()
 
-            return
+            System.exit(1)
         }
 
         try {
@@ -385,13 +385,22 @@ has expired tokens and OAUTH2 leg 1 needs to be re-run"""
         } catch (BoxAPIException e) {
             println 'Error: Box API could not upload the file to the target folder'
             println boxErrorMessage(e)
+            tokensLock.release()
+            tokensRAF.close()
+
+            System.exit(1)
         } catch (e) {
             println 'Error: System could not upload the file to the target folder'
             println e.toString()
-        } finally {
             tokensLock.release()
             tokensRAF.close()
+
+            System.exit(1)
         }
+
+        tokensLock.release()
+        tokensRAF.close()
+
     } //end main()
 
     private static void uploadFileToFolder(BoxFolder folder, InputStream fileStream, String fileName, long fileSize, String fileSHA1, cmdLineOpts) {
