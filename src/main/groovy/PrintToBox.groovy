@@ -51,7 +51,7 @@ do not exist. By default, it uploads a new version for existing files.
 
         if (cmdLineOpts.R && cmdLineOpts.U) {
             println 'Error: -R/--replace and -U/--no-update are mutually exclusive options. See --help for details.'
-            return
+            System.exit(1)
         }
 
         try {
@@ -67,10 +67,11 @@ do not exist. By default, it uploads a new version for existing files.
                 String userId = boxHelper.createAppUser(configOpts, (String) cmdLineOpts.C)
                 println """Created user. Add this to ${CONFIG_FILE}:
 "appUserId": "${userId}" """
+                return
             } catch (e) {
                 if (cmdLineOpts.D) e.printStackTrace()
+                System.exit(1)
             }
-            return
         }
 
         if (cmdLineOpts.arguments().size() < 2) {
@@ -112,6 +113,7 @@ do not exist. By default, it uploads a new version for existing files.
 
         } catch (e) {
             if (cmdLineOpts.D) e.printStackTrace()
+            System.exit(1)
         }
     } //end main()
 }
