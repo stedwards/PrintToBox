@@ -41,7 +41,7 @@ Options:
    * RedHat/RPM distros: `sudo rpm -i build/distributions/printtobox-VERSION.rpm`
    * Ubuntu/DEB distros: `sudo dpkg -i build/distributions/printtobox_VERSION.deb`
 5. `sudo usermod -a -G printtobox <username>`
- * N.b., **anyone in this group can read the config file, keys, and key password**. This is why it is a good idea to
+   * N.b., **anyone in this group can read the config file, keys, and key password**. This is why it is a good idea to
  abstract access via CUPS or cron. Making the executable setuid=root is *not* recommended.
  
 ## Setting up configuration with Box.com
@@ -53,8 +53,8 @@ Options:
         chown root:printtobox /etc/PrintToBox/PrintToBox_private_key.pem /etc/PrintToBox/PrintToBox_public_key.pem
 
 2. Log into Box.com with an account with developer access
- * Sign up to be a developer here: https://developers.box.com
- * Then, go to your account settings (https://EXAMPLE.app.box.com/settings/security) and enable two-factor authentication (mandatory for below)
+   * Sign up to be a developer here: https://developers.box.com
+   * Then, go to your account settings (https://EXAMPLE.app.box.com/settings/security) and enable two-factor authentication (mandatory for below)
 3. Create a new application
    * Go here: https://EXAMPLE.app.box.com/developers/services/edit/
    * Name it something unique. Select "Box Content" and press "Create Application"
@@ -63,25 +63,25 @@ Options:
    * Check these `Scopes`:
      * Read and write all files and folders
      * Create and manage app users
- * Click "Save Application"
- * Click "Add Public Key"
- * Copy the contents of `/etc/PrintToBox/PrintToBox_public_key.pem` into the "Public Key" field
- * Click "Verify" and then click "Save"
- * Click "Save Application"
- * Update `/etc/PrintToBox/PrintToBox.conf` with the following fields:
-   * Enterprise domain (@example.com) &mdash; "enterpriseDomain"
-   * Key Id &mdash; "keyId"
-   * Private key filename &mdash; "keyFileName"
-   * Private key password &mdash; "keyPassword"
-   * client_id &mdash; "clientId"
-   * client_secret &mdash; "clientSecret"
+   * Click "Save Application"
+   * Click "Add Public Key"
+   * Copy the contents of `/etc/PrintToBox/PrintToBox_public_key.pem` into the "Public Key" field
+   * Click "Verify" and then click "Save"
+   * Click "Save Application"
+   * Update `/etc/PrintToBox/PrintToBox.conf` with the following fields:
+     * Enterprise domain (@example.com) &mdash; "enterpriseDomain"
+     * `Key Id` &mdash; "keyId"
+     * Private key filename &mdash; "keyFileName"
+     * Private key password &mdash; "keyPassword"
+     * `client_id` &mdash; "clientId"
+     * `client_secret` &mdash; "clientSecret"
 4. Go to the Admin Console
- * Go here: https://EXAMPLE.app.box.com/master/settings
- * Click "Business Settings". Click "Account Settings".
- * Update `/etc/PrintToBox/PrintToBox.conf` with the following fields:
-   * `Enterprise ID` &mdash; "enterpriseId" 
- * Then, click the "App" tab and click "Authorize New App"
- * Copy the `client_id` from above into the "API Key" field and click "Okay"
+   * Go here: https://EXAMPLE.app.box.com/master/settings
+   * Click "Business Settings". Click "Account Settings".
+   * Update `/etc/PrintToBox/PrintToBox.conf` with the following fields:
+     * `Enterprise ID` &mdash; "enterpriseId" 
+   * Then, click the "App" tab and click "Authorize New App"
+   * Copy the `client_id` from above into the "API Key" field and click "Okay"
 5. Generate an AppUser and update `/etc/PrintToBox/PrintToBox.conf` with the "appUserId"
 
         $ PrintToBox -C <APP_USERNAME>
