@@ -46,12 +46,12 @@ Options:
  
 ## Setting up configuration with Box.com
 1. Generate a public/private keypair with a password on the private key. Recommended:
-```
-$ openssl genrsa -aes256 -out /etc/PrintToBox/PrintToBox_private_key.pem 8192
-$ openssl rsa -pubout -in /etc/PrintToBox/PrintToBox_private_key.pem -out /etc/PrintToBox/PrintToBox_public_key.pem
-$ chmod 640 /etc/PrintToBox/PrintToBox_private_key.pem /etc/PrintToBox/PrintToBox_public_key.pem
-$ chown root:printtobox /etc/PrintToBox/PrintToBox_private_key.pem /etc/PrintToBox/PrintToBox_public_key.pem
-```
+
+        openssl genrsa -aes256 -out /etc/PrintToBox/PrintToBox_private_key.pem 8192
+        openssl rsa -pubout -in /etc/PrintToBox/PrintToBox_private_key.pem -out /etc/PrintToBox/PrintToBox_public_key.pem
+        chmod 640 /etc/PrintToBox/PrintToBox_private_key.pem /etc/PrintToBox/PrintToBox_public_key.pem
+        chown root:printtobox /etc/PrintToBox/PrintToBox_private_key.pem /etc/PrintToBox/PrintToBox_public_key.pem
+
 2. Log into Box.com with an account with developer access
  * Sign up to be a developer here: https://developers.box.com
  * Then, go to your account settings (https://EXAMPLE.app.box.com/settings/security) and enable two-factor authentication (mandatory for below)
@@ -83,15 +83,15 @@ $ chown root:printtobox /etc/PrintToBox/PrintToBox_private_key.pem /etc/PrintToB
  * Then, click the "App" tab and click "Authorize New App"
  * Copy the `client_id` from above into the "API Key" field and click "Okay"
 5. Generate an AppUser and update `/etc/PrintToBox/PrintToBox.conf` with the "appUserId"
-```
-$ PrintToBox -C <APP_USERNAME>
-Created user. Add this to /etc/PrintToBox/PrintToBox.conf:
-"appUserId": "9999999999" 
-```
+
+        $ PrintToBox -C <APP_USERNAME>
+        Created user. Add this to /etc/PrintToBox/PrintToBox.conf:
+        "appUserId": "9999999999" 
+
 6. Try out a test upload
-```
-$ PrintToBox <MY USERNAME> <TEST FILENAME>
-```
+
+        PrintToBox <MY USERNAME> <TEST FILENAME>
+
  * Check the "PrintToBox <MY USERNAME>" folder for your uploaded file
 
 ## Tea4CUPS
