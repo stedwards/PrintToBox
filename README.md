@@ -60,7 +60,7 @@ Options:
  * Name it something unique. Select "Box Content" and press "Create Application"
  * For `redirect_uri`, set it to a bogus **https** URL
  * `User Type` is "App Users"
- * `Scopes` checked:
+ * Check these `Scopes`:
    * Read and write all files and folders
    * Create and manage app users
  * Click "Save Application"
