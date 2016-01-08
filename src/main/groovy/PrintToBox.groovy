@@ -3,7 +3,7 @@ import com.box.sdk.BoxUser
 
 final class PrintToBox {
     private static final String VERSION = '2.0'
-    private static final String CONFIG_FILE = '/etc/PrintToBox.conf'
+    private static final String CONFIG_FILE = '/etc/PrintToBox/PrintToBox.conf'
 
     static void main(String[] args) {
         BoxUser.Info userInfo

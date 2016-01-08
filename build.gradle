@@ -1,23 +1,24 @@
 plugins {
-  id "nebula.os-package" version "2.2.6"
+  id "nebula.ospackage" version "3.2.1"
 }
 
 apply plugin: 'groovy'
 apply plugin: 'application'
-apply plugin: 'os-package'
+apply plugin: 'nebula.ospackage'
 version = '2.0'
 mainClassName='PrintToBox'
 
 repositories {
     mavenCentral()
-    maven {
-        url "https://oss.sonatype.org/content/repositories/snapshots/"
-    }
+// Only necessary for using Box SDK development snapshots
+//    maven {
+//        url "https://oss.sonatype.org/content/repositories/snapshots/"
+//    }
 }
 
 dependencies {
-    compile 'org.codehaus.groovy:groovy-all:2.4.4'
-    compile 'com.box:box-java-sdk:1.2.0-SNAPSHOT'
+    compile 'org.codehaus.groovy:groovy-all:2.4.5'
+    compile 'com.box:box-java-sdk:2.0.0'
     compile 'commons-cli:commons-cli:1.3.1'
     runtime 'org.slf4j:slf4j-api:1.7.12'
     runtime 'org.slf4j:slf4j-simple:1.7.12'
@@ -37,7 +38,6 @@ ospackage  {
     permissionGroup = 'root'
     requires('coreutils')
     preInstall = file('preInstall.sh')
-    postUninstall = file('postUninstall.sh')
 
     from ('build/install/PrintToBox/lib') {
         into '/usr/lib/PrintToBox/lib'
@@ -51,7 +51,7 @@ ospackage  {
     }
     from ('PrintToBox.conf') {
         fileType CONFIG | NOREPLACE
-        into '/etc'
+        into '/etc/PrintToBox'
         user 'root'
         permissionGroup 'printtobox'
         fileMode 0640
@@ -64,12 +64,16 @@ ospackage  {
 }
 
 task createDeb(type: Deb, dependsOn: [installApp]) {
-    configurationFile('''/etc/PrintToBox.conf
+    configurationFile('''/etc/PrintToBox/PrintToBox.conf
 ''')
     requires('openjdk-7-jre-headless | java7-runtime-headless | jre')
     requires('passwd')
+
+    link('/usr/bin/PrintToBox', '/usr/lib/PrintToBox/bin/PrintToBox')
 }
 
 task createRpm(type: Rpm, dependsOn: [installApp]) {
     requires('shadow-utils')
+
+    link('/usr/bin/PrintToBox', '/usr/lib/PrintToBox/bin/PrintToBox')
 }

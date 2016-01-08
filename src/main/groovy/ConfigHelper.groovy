@@ -51,7 +51,7 @@ final class ConfigHelper implements Map {
   "clientId": "abcdefghijklmnopqrstuvwxyz123456",
   "clientSecret": "abcdefghijklmnopqrstuvwxyz123456",
   "keyId": "987654321",
-  "keyFileName": "/etc/PrintToBox_private_key.pem",
+  "keyFileName": "/etc/PrintToBox/PrintToBox_private_key.pem",
   "keyPassword": "aoeu1234aoeu1234aoeu1234",
   "appUserId": "12349876"
 }
@@ -62,6 +62,7 @@ Optional keys:
             throw e
 
         } catch (e) {
+            println 'Error: Invalid config file: ' + ConfigFileName
             println e.toString()
             println e.getCause().toString()
             throw e

@@ -89,7 +89,15 @@ ${configOpts.getConfigFileName()} is not configured correctly
     }
 
     private JWTEncryptionPreferences getEncryptionPreferences(configOpts) {
-        String privateKey = new String(Files.readAllBytes(Paths.get((String)configOpts.keyFileName)))
+
+        String privateKey
+
+        try {
+            privateKey = new String(Files.readAllBytes(Paths.get((String) configOpts.keyFileName)))
+        } catch (e) {
+            println """Error: Could not read private key file: ${configOpts.keyFileName}"""
+            throw e
+        }
 
         JWTEncryptionPreferences encryptionPref = new JWTEncryptionPreferences()
         encryptionPref.setPublicKeyID((String) configOpts.keyId)

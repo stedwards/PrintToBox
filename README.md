@@ -47,10 +47,10 @@ Options:
 ## Setting up configuration with Box.com
 1. Generate a public/private keypair with a password on the private key. Recommended:
 ```
-$ openssl genrsa -aes256 -out /etc/PrintToBox_private_key.pem 8192
-$ openssl rsa -pubout -in /etc/PrintToBox_private_key.pem -out /etc/PrintToBox_public_key.pem
-$ chmod 640 /etc/PrintToBox_private_key.pem /etc/PrintToBox_public_key.pem
-$ chown root:printtobox /etc/PrintToBox_private_key.pem /etc/PrintToBox_public_key.pem
+$ openssl genrsa -aes256 -out /etc/PrintToBox/PrintToBox_private_key.pem 8192
+$ openssl rsa -pubout -in /etc/PrintToBox/PrintToBox_private_key.pem -out /etc/PrintToBox/PrintToBox_public_key.pem
+$ chmod 640 /etc/PrintToBox/PrintToBox_private_key.pem /etc/PrintToBox/PrintToBox_public_key.pem
+$ chown root:printtobox /etc/PrintToBox/PrintToBox_private_key.pem /etc/PrintToBox/PrintToBox_public_key.pem
 ```
 2. Log into Box.com with an account with developer access
  * Sign up to be a developer here: https://developers.box.com
@@ -65,10 +65,10 @@ $ chown root:printtobox /etc/PrintToBox_private_key.pem /etc/PrintToBox_public_k
    * "Create and manage app users"
  * Click "Save Application"
  * Click "Add Public Key"
- * Copy the contents of `/etc/PrintToBox_public_key.pem` into the "Public Key" field
+ * Copy the contents of `/etc/PrintToBox/PrintToBox_public_key.pem` into the "Public Key" field
  * Click "Verify" and then click "Save"
  * Click "Save Application"
- * Update `/etc/PrintToBox.conf` with the following fields:
+ * Update `/etc/PrintToBox/PrintToBox.conf` with the following fields:
  * * Enterprise domain (@example.com) &mdash; "enterpriseDomain"
  * * `Key Id` &mdash; "keyId"
  * * Private key filename &mdash; "keyFileName"
@@ -78,14 +78,14 @@ $ chown root:printtobox /etc/PrintToBox_private_key.pem /etc/PrintToBox_public_k
 4. Go to the Admin Console
  * Go here: https://EXAMPLE.app.box.com/master/settings
  * Click "Business Settings". Click "Account Settings".
- * Update `/etc/PrintToBox.conf` with the following fields:
+ * Update `/etc/PrintToBox/PrintToBox.conf` with the following fields:
    * `Enterprise ID` &mdash; "enterpriseId" 
  * Then, click the "App" tab and click "Authorize New App"
  * Copy the `client_id` from above into the "API Key" field and click "Okay"
-5. Generate an AppUser and update `/etc/PrintToBox.conf` with the "appUserId"
+5. Generate an AppUser and update `/etc/PrintToBox/PrintToBox.conf` with the "appUserId"
 ```
 $ PrintToBox -C <APP_USERNAME>
-Created user. Add this to /etc/PrintToBox.conf:
+Created user. Add this to /etc/PrintToBox/PrintToBox.conf:
 "appUserId": "9999999999" 
 ```
 6. Try out a test upload
