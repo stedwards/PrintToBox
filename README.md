@@ -56,14 +56,13 @@ Options:
  * Sign up to be a developer here: https://developers.box.com
  * Then, go to your account settings (https://EXAMPLE.app.box.com/settings/security) and enable two-factor authentication (mandatory for below)
 3. Create a new application
- * Go here: https://EXAMPLE.app.box.com/developers/services/edit/
- * Name it something unique. Select "Box Content" and press "Create Application"
- * For `redirect_uri`, set it to a bogus **https** URL
- * `User Type` is "App Users"
- * Check these `Scopes`:
-   * Read and write all files and folders
-   * Create and manage app users
-
+   * Go here: https://EXAMPLE.app.box.com/developers/services/edit/
+   * Name it something unique. Select "Box Content" and press "Create Application"
+   * For `redirect_uri`, set it to a bogus **https** URL
+   * `User Type` is "App Users"
+   * Check these `Scopes`:
+     * Read and write all files and folders
+     * Create and manage app users
  * Click "Save Application"
  * Click "Add Public Key"
  * Copy the contents of `/etc/PrintToBox/PrintToBox_public_key.pem` into the "Public Key" field
