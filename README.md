@@ -63,6 +63,7 @@ Options:
  * Check these `Scopes`:
    * Read and write all files and folders
    * Create and manage app users
+
  * Click "Save Application"
  * Click "Add Public Key"
  * Copy the contents of `/etc/PrintToBox/PrintToBox_public_key.pem` into the "Public Key" field
