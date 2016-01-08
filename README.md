@@ -92,7 +92,7 @@ Options:
 
         PrintToBox <MY USERNAME> <TEST FILENAME>
 
-7. Check the "PrintToBox <MY USERNAME>" folder for your uploaded file
+7. Check the `PrintToBox <MY USERNAME>` folder for your uploaded file
 
 ## Tea4CUPS
 1. Install Tea4CUPS using your distribution package manager or get it here: [Tea4CUPS](http://www.pykota.com/software/tea4cups)
