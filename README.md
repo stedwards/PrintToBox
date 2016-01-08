@@ -61,8 +61,8 @@ Options:
  * For `redirect_uri`, set it to a bogus **https** URL
  * `User Type` is "App Users"
  * `Scopes` checked:
-   * "Read and write all files and folders"
-   * "Create and manage app users"
+   * Read and write all files and folders
+   * Create and manage app users
  * Click "Save Application"
  * Click "Add Public Key"
  * Copy the contents of `/etc/PrintToBox/PrintToBox_public_key.pem` into the "Public Key" field
