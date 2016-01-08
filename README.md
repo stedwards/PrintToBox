@@ -69,12 +69,12 @@ Options:
  * Click "Verify" and then click "Save"
  * Click "Save Application"
  * Update `/etc/PrintToBox/PrintToBox.conf` with the following fields:
- * * Enterprise domain (@example.com) &mdash; "enterpriseDomain"
- * * `Key Id` &mdash; "keyId"
- * * Private key filename &mdash; "keyFileName"
- * * Private key password &mdash; "keyPassword"
- * * `client_id` &mdash; "clientId"
- * * `client_secret` &mdash; "clientSecret" 
+   * Enterprise domain (@example.com) &mdash; "enterpriseDomain"
+   * `Key Id` &mdash; "keyId"
+   * Private key filename &mdash; "keyFileName"
+   * Private key password &mdash; "keyPassword"
+   * `client_id` &mdash; "clientId"
+   * `client_secret` &mdash; "clientSecret"
 4. Go to the Admin Console
  * Go here: https://EXAMPLE.app.box.com/master/settings
  * Click "Business Settings". Click "Account Settings".
