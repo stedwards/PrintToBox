@@ -228,6 +228,31 @@ ${configOpts.getConfigFileName()} is not configured correctly
         }
     }
 
+    public void downloadFiles(files, BoxFolder downloadFolder, cmdLineOpts) {
+        try {
+            files.each { fileName, fileProperties ->
+                println 'GOT HERE files fileName ' + fileName
+                for (BoxItem.Info itemInfo : downloadFolder) {
+                    if (itemInfo instanceof BoxFile.Info && itemInfo.getName() == fileName) {
+                        println 'GOT HERE files'
+                        FileOutputStream stream = new FileOutputStream(itemInfo.getName())
+                        itemInfo.getResource().download(stream)
+                        stream.close()
+                    }
+                }
+            }
+
+        } catch (BoxAPIException e) {
+            println 'Error: Box API could not download the file to the target folder'
+            println boxErrorMessage(e)
+            throw e
+        } catch (e) {
+            println 'Error: System could not download the file to the target folder'
+            println e.toString()
+            throw e
+        }
+    }
+
     public void uploadFileToFolder(BoxFolder folder, MarkableFileInputStream fileStream, String fileName, long fileSize, String fileSHA1, cmdLineOpts) {
 
         // By definition, there is an explicit race condition on checking if a file exists and then
@@ -288,8 +313,7 @@ ${configOpts.getConfigFileName()} is not configured correctly
         return returnValue
     }
 
-    public BoxFolder getFolder(BoxFolder folder, String folderName) {
-
+    public BoxFolder findFolder(BoxFolder folder, String folderName) {
         //Try to find an existing folder and return that
         for (BoxItem.Info itemInfo : folder) {
 
@@ -298,10 +322,19 @@ ${configOpts.getConfigFileName()} is not configured correctly
                 return returnFolder
             }
         }
+    }
+
+    public BoxFolder getFolder(BoxFolder folder, String folderName) {
+
+        BoxFolder returnFolder
+        //Try to find an existing folder and return that
+        returnFolder = findFolder(folder, folderName)
+        if (returnFolder != null)
+            return returnFolder;
 
         //Give up and create a new folder and return it
         BoxFolder.Info returnFolderInfo = folder.createFolder(folderName)
-        BoxFolder returnFolder = (BoxFolder) returnFolderInfo.getResource()
+        returnFolder = (BoxFolder) returnFolderInfo.getResource()
 
         return returnFolder
     }

@@ -90,53 +90,67 @@ println 'Sending:'
                 println 'file: ' + k
             }
 
+            try {
+                totalSize = new FilesHelper().setFilesProperties(files, cmdLineOpts."differ")
+
+                BoxHelper boxHelper = new BoxHelper(configOpts)
+                userInfo            = boxHelper.getAPIUserInfo()
+                rootFolder          = boxHelper.getRootFolder()
+                collaborationFolder = boxHelper.getCollaborationFolder(rootFolder, folderName)
+
+                boxHelper.setupCollaboration(collaborationFolder, userInfo, userName, (String) configOpts.enterpriseDomain)
+
+                printFolder = boxHelper.getUploadFolder(collaborationFolder, folderName)
+
+                if (cmdLineOpts."total-size" && files.size() > 1) {
+                    boxHelper.checkUploadSize(printFolder, totalSize)
+                }
+
+                boxHelper.uploadFiles(files, printFolder, cmdLineOpts)
+
+            } catch (e) {
+                if (cmdLineOpts.D) e.printStackTrace()
+                System.exit(1)
+            }
 
         } else if (cmdLineOpts.arguments()[0].toString().contains((String) configOpts.enterpriseDomain + ':')) {
 println 'Receiving:'
-            String target = cmdLineOpts.arguments()[0]
-            println 'target: ' + target
-            int indexEnterpriseDomain = target.indexOf(((String) configOpts.enterpriseDomain) + ':')
+            String source = cmdLineOpts.arguments()[0]
+            println 'source: ' + source
+            int indexEnterpriseDomain = source.indexOf(((String) configOpts.enterpriseDomain) + ':')
             println 'idx: ' + indexEnterpriseDomain.toString()
 
-            //FIXME don't need userName in this mode
+            folderName = source.substring(indexEnterpriseDomain + configOpts.enterpriseDomain.toString().length() + 1)
+            File folderFileObj = new File(folderName)
+            folderName = folderFileObj.getParent()
 
-            userName = target.substring(0, indexEnterpriseDomain)
+println 'folderName: ' + folderName
+            println 'folderFileOjb: ' + folderFileObj.getName()
 
-            folderName = target.substring(indexEnterpriseDomain + configOpts.enterpriseDomain.toString().length() + 1)
+            files[folderFileObj.getName()] = [:]
 
-            cmdLineOpts.arguments()[1..-1].each { k ->
-                files[k] = [:]
-                println 'file: ' + k
+            try {
+                BoxHelper boxHelper = new BoxHelper(configOpts)
+println 'GOT HERE 1'
+                rootFolder          = boxHelper.getRootFolder()
+                println 'GOT HERE 2'
+
+                printFolder = boxHelper.findFolder(rootFolder, folderName)
+                println 'GOT HERE 3'
+
+                boxHelper.downloadFiles(files, printFolder, cmdLineOpts)
+                println 'GOT HERE 4'
+
+            } catch (e) {
+                if (cmdLineOpts.D) e.printStackTrace()
+                System.exit(1)
             }
-
 
         }
 
 println userName
 println folderName
-return
 
-        try {
-            totalSize = new FilesHelper().setFilesProperties(files, cmdLineOpts."differ")
 
-            BoxHelper boxHelper = new BoxHelper(configOpts)
-            userInfo            = boxHelper.getAPIUserInfo()
-            rootFolder          = boxHelper.getRootFolder()
-            collaborationFolder = boxHelper.getCollaborationFolder(rootFolder, folderName)
-
-            boxHelper.setupCollaboration(collaborationFolder, userInfo, userName, (String) configOpts.enterpriseDomain)
-
-            printFolder = boxHelper.getUploadFolder(collaborationFolder, folderName)
-
-            if (cmdLineOpts."total-size" && files.size() > 1) {
-                boxHelper.checkUploadSize(printFolder, totalSize)
-            }
-
-            boxHelper.uploadFiles(files, printFolder, cmdLineOpts)
-
-        } catch (e) {
-            if (cmdLineOpts.D) e.printStackTrace()
-            System.exit(1)
-        }
     } //end main()
 }
