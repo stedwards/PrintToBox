@@ -228,18 +228,31 @@ ${configOpts.getConfigFileName()} is not configured correctly
         }
     }
 
-    public void downloadFiles(files, BoxFolder downloadFolder, cmdLineOpts) {
+    public void downloadFiles(files, BoxFolder rootFolder, String target, cmdLineOpts) {
         try {
             files.each { fileName, fileProperties ->
-                println 'GOT HERE files fileName ' + fileName
-                for (BoxItem.Info itemInfo : downloadFolder) {
-                    if (itemInfo instanceof BoxFile.Info && itemInfo.getName() == fileName) {
-                        println 'GOT HERE files'
-                        FileOutputStream stream = new FileOutputStream(itemInfo.getName())
+
+                File fileObj = new File(fileName)
+                File parentFolderFile = fileObj.getParentFile()
+                Path folderPath = parentFolderFile.toPath()
+                BoxFolder sourceFolder = rootFolder
+
+                folderPath.subpath(0, folderPath.getNameCount()).each({
+                    sourceFolder = findFolder(sourceFolder, it.toString())
+                })
+
+                //TODO support for --differ, --no-update
+                for (BoxItem.Info itemInfo : sourceFolder) {
+                    if (itemInfo instanceof BoxFile.Info && itemInfo.getName() == fileObj.getName()) {
+                        FileOutputStream stream = new FileOutputStream(target + '/' + itemInfo.getName())
                         itemInfo.getResource().download(stream)
                         stream.close()
+                        return // from files.each{} closure
                     }
                 }
+
+                //TODO if we support receiving multiple files, add command line option to ignore missing files
+                throw new GroovyRuntimeException('Error: File not found in Box: ' + fileName)
             }
 
         } catch (BoxAPIException e) {

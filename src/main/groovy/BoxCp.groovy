@@ -68,16 +68,11 @@ do not exist. By default, it uploads a new version for existing files.
 
         //FIXME: IN PrintToBox.groovy, createAppUser should allow and encourage you to create an email address because
         // the default is WHACK and users unlikely to be able to share with it
-
-println cmdLineOpts.arguments()[-1].toString()
-
         //FIXME: Refactor
         if (cmdLineOpts.arguments()[-1].toString().contains((String) configOpts.enterpriseDomain + ':')) {
-println 'Sending:'
+
             String target = cmdLineOpts.arguments()[-1]
-            println 'target: ' + target
             int indexEnterpriseDomain = target.indexOf(((String) configOpts.enterpriseDomain) + ':')
-            println 'idx: ' + indexEnterpriseDomain.toString()
 
             //FIXME: if no username before @enterprisedomain.com:folder then skip collaboration and upload to AppUser's account
 
@@ -87,7 +82,6 @@ println 'Sending:'
 
             cmdLineOpts.arguments()[0..-2].each { k ->
                 files[k] = [:]
-                println 'file: ' + k
             }
 
             try {
@@ -114,43 +108,24 @@ println 'Sending:'
             }
 
         } else if (cmdLineOpts.arguments()[0].toString().contains((String) configOpts.enterpriseDomain + ':')) {
-println 'Receiving:'
             String source = cmdLineOpts.arguments()[0]
-            println 'source: ' + source
+            String target = cmdLineOpts.arguments()[-1]
+
             int indexEnterpriseDomain = source.indexOf(((String) configOpts.enterpriseDomain) + ':')
-            println 'idx: ' + indexEnterpriseDomain.toString()
 
             folderName = source.substring(indexEnterpriseDomain + configOpts.enterpriseDomain.toString().length() + 1)
-            File folderFileObj = new File(folderName)
-            folderName = folderFileObj.getParent()
 
-println 'folderName: ' + folderName
-            println 'folderFileOjb: ' + folderFileObj.getName()
-
-            files[folderFileObj.getName()] = [:]
+            files[folderName] = [:]
 
             try {
                 BoxHelper boxHelper = new BoxHelper(configOpts)
-println 'GOT HERE 1'
                 rootFolder          = boxHelper.getRootFolder()
-                println 'GOT HERE 2'
-
-                printFolder = boxHelper.findFolder(rootFolder, folderName)
-                println 'GOT HERE 3'
-
-                boxHelper.downloadFiles(files, printFolder, cmdLineOpts)
-                println 'GOT HERE 4'
-
+                boxHelper.downloadFiles(files, rootFolder, target, cmdLineOpts)
             } catch (e) {
                 if (cmdLineOpts.D) e.printStackTrace()
                 System.exit(1)
             }
 
         }
-
-println userName
-println folderName
-
-
     } //end main()
 }
