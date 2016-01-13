@@ -6,6 +6,8 @@ apply plugin: 'groovy'
 apply plugin: 'application'
 apply plugin: 'nebula.ospackage'
 version = '2.0'
+
+//FIXME: This needs to work with both PrintToBox and BoxCp
 mainClassName='BoxCp'
 
 repositories {
