@@ -18,7 +18,7 @@ Options:
  -C,--create-user <username>   Create AppUser <username> and exit
  -d,--differ                   Upload new version only if the file differs
  -D,--debug                    Enable debugging
- -E,--erase-user               CAUTION: Erase configured AppUser and exit
+    --delete-user              CAUTION: Delete configured AppUser and exit
  -f,--folder <folder>          Box folder path. Top-level should be
                                unique. Default: "PrintToBox <username>"
  -h,--help                     Print this help text and exit

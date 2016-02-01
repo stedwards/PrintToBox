@@ -68,8 +68,8 @@ ${configOpts.getConfigFileName()} is not configured correctly
             return
 
         } catch (BoxAPIException e) {
-            println """Error: Could not delete AppAuth user. Usually, this means that
-${configOpts.getConfigFileName()} is not configured correctly
+            println """Error: Could not delete AppAuth user. Usually, this means that the AppUser does
+not exist or that ${configOpts.getConfigFileName()} is not configured correctly
 """
             println boxErrorMessage(e)
             throw e
