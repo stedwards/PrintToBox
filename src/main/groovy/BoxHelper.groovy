@@ -48,6 +48,34 @@ ${configOpts.getConfigFileName()} is not configured correctly
         }
     }
 
+    public void deleteAppUser(configOpts) {
+        deleteAppUser(configOpts, (String) configOpts.appUserId)
+    }
+
+    public void deleteAppUser(configOpts, String userId) {
+        try {
+            JWTEncryptionPreferences encryptionPreferences = getEncryptionPreferences(configOpts)
+
+            api = BoxDeveloperEditionAPIConnection.getAppEnterpriseConnection(
+                    (String) configOpts.enterpriseId,
+                    (String) configOpts.clientId,
+                    (String) configOpts.clientSecret,
+                    encryptionPreferences)
+
+            BoxUser user = new BoxUser(api, userId);
+            user.delete(false, true)
+
+            return
+
+        } catch (BoxAPIException e) {
+            println """Error: Could not delete AppAuth user. Usually, this means that
+${configOpts.getConfigFileName()} is not configured correctly
+"""
+            println boxErrorMessage(e)
+            throw e
+        }
+    }
+
     public void connect(configOpts) {
 
         int i = 0
@@ -106,6 +134,25 @@ ${configOpts.getConfigFileName()} is not configured correctly
         encryptionPref.setEncryptionAlgorithm(EncryptionAlgorithm.RSA_SHA_256)
 
         return encryptionPref
+    }
+
+    def getAppUserProperties() {
+
+        def userProperties = [:]
+
+        try {
+            BoxUser.Info boxUserInfo = getAPIUserInfo()
+            userProperties.id = boxUserInfo.getID()
+            userProperties.name = boxUserInfo.getName()
+            userProperties.login = boxUserInfo.getLogin()
+
+            return userProperties
+
+        } catch (BoxAPIException e) {
+            println 'Error: Could not retrieve AppUser properties via the API'
+            println boxErrorMessage(e)
+            throw e
+        }
     }
 
     public BoxUser.Info getAPIUserInfo() {

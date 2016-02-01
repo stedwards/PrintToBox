@@ -1,5 +1,6 @@
 import com.box.sdk.BoxFolder
 import com.box.sdk.BoxUser
+import org.codehaus.groovy.GroovyException
 
 final class PrintToBox {
     private static final String VERSION = '2.0'
@@ -30,14 +31,22 @@ do not exist. By default, it uploads a new version for existing files.
         cli.C(longOpt:'create-user', args: 1, argName:'username', 'Create AppUser <username> and exit')
         cli.d(longOpt:'differ', 'Upload new version only if the file differs')
         cli.D(longOpt:'debug', 'Enable debugging')
+        cli.E(longOpt:'erase-user', 'CAUTION: Erase configured AppUser and exit')
         cli.f(longOpt:'folder', args: 1, argName:'folder', 'Box folder path. Top-level should be unique. Default: "PrintToBox <username>"')
-        cli.h(longOpt:'help', 'Print this help text')
+        cli.h(longOpt:'help', 'Print this help text and exit')
+        cli.I(longOpt:'user-info', 'Print information about the configured AppUser and exit')
         cli.R(longOpt:'replace', 'If the filename already exists in Box, delete it (and all versions) and replace it with this file')
         cli.T(longOpt:'total-size', 'Abort if total size of file set exceeds storage in Box. May not make sense with --replace, --differ, or --no-update')
         cli.U(longOpt:'no-update', 'If the filename already exists in Box, do nothing')
         cli.V(longOpt:'version', 'Display the program version and exit')
 
-        cmdLineOpts = cli.parse(args)
+        try {
+            cmdLineOpts = cli.parse(args)
+            if (!cmdLineOpts)
+                throw new GroovyException('Error with commandline options')
+        } catch (e) {
+            System.exit(1)
+        }
 
         if (cmdLineOpts.V) {
             println 'PrintToBox ' + VERSION
@@ -54,11 +63,30 @@ do not exist. By default, it uploads a new version for existing files.
             System.exit(1)
         }
 
+        if (cmdLineOpts.C && cmdLineOpts.I || cmdLineOpts.C && cmdLineOpts.E || cmdLineOpts.E && cmdLineOpts.I) {
+            println 'Error: -C/--create-user, -E/--erase-user, and -I/--user-info are mutually exclusive options. See --help for details.'
+            System.exit(1)
+        }
+
         try {
             configOpts = new ConfigHelper(CONFIG_FILE)
         } catch (e) {
             if (cmdLineOpts.D) e.printStackTrace()
             return
+        }
+
+        if (cmdLineOpts.I) {
+            try {
+                BoxHelper boxHelper = new BoxHelper(configOpts)
+                def userProperties = boxHelper.getAppUserProperties()
+                println 'Login: ' + userProperties.login
+                println 'ID: ' + userProperties.id
+                println 'Name: ' + userProperties.name
+                return
+            } catch (e) {
+                if (cmdLineOpts.D) e.printStackTrace()
+                System.exit(1)
+            }
         }
 
         if (cmdLineOpts.C) {
@@ -73,6 +101,20 @@ do not exist. By default, it uploads a new version for existing files.
                 System.exit(1)
             }
         }
+
+        if (cmdLineOpts.E) {
+            try {
+                BoxHelper boxHelper = new BoxHelper()
+                boxHelper.deleteAppUser(configOpts)
+                println """Deleted AppUser. Update this line in ${CONFIG_FILE}:
+"appUserId": "${configOpts.appUserId}" """
+                return
+            } catch (e) {
+                if (cmdLineOpts.D) e.printStackTrace()
+                System.exit(1)
+            }
+        }
+
 
         if (cmdLineOpts.arguments().size() < 2) {
             cli.usage()

@@ -15,20 +15,24 @@ the owner. Creates the collaborated folder and any subfolder[s] if they
 do not exist. By default, it uploads a new version for existing files.
 
 Options:
- -C,--create-user <username>  Create AppUser <username> and exit
- -d,--differ                  Upload new version only if the file differs
- -f,--folder <folder>         Box folder path. Top-level should be unique.
-                              Default: "PrintToBox <username>"
- -h,--help                    Print this help text
- -R,--replace                 If the filename already exists in Box,
-                              delete it (and all versions) and replace it
-                              with this file
- -T,--total-size              Abort if total size of file set exceeds
-                              storage in Box. May not make sense with
-                              --replace, --differ, or --no-update
- -U,--no-update               If the filename already exists in Box, do
-                              nothing
- -V,--version                 Display the program version and exit
+ -C,--create-user <username>   Create AppUser <username> and exit
+ -d,--differ                   Upload new version only if the file differs
+ -D,--debug                    Enable debugging
+ -E,--erase-user               CAUTION: Erase configured AppUser and exit
+ -f,--folder <folder>          Box folder path. Top-level should be
+                               unique. Default: "PrintToBox <username>"
+ -h,--help                     Print this help text and exit
+ -I,--user-info                Print information about the configured
+                               AppUser and exit
+ -R,--replace                  If the filename already exists in Box,
+                               delete it (and all versions) and replace it
+                               with this file
+ -T,--total-size               Abort if total size of file set exceeds
+                               storage in Box. May not make sense with
+                               --replace, --differ, or --no-update
+ -U,--no-update                If the filename already exists in Box, do
+                               nothing
+ -V,--version                  Display the program version and exit
 ```
 
 ## Building and Installing
