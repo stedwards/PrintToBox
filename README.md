@@ -54,7 +54,7 @@ Options:
 
 2. Log into Box.com with an account with developer access
    * Sign up to be a developer here: https://developers.box.com
-   * Then, go to your account settings (https://EXAMPLE.app.box.com/settings/security) and enable two-factor authentication (mandatory for below)
+   * Then, go to your account settings (https://EXAMPLE.app.box.com/settings/security) and enable two-factor authentication unless you are using single sign-on (two-factor or SSO are mandatory for the steps below)
 3. Create a new application
    * Go here: https://EXAMPLE.app.box.com/developers/services/edit/
    * Name it something unique. Select "Box Content" and press "Create Application"
@@ -77,10 +77,10 @@ Options:
      * `client_secret` &mdash; "clientSecret"
 4. Go to the Admin Console
    * Go here: https://EXAMPLE.app.box.com/master/settings
-   * Click "Business Settings". Click "Account Settings".
+   * Click "Enterprise Settings" (or "Business Settings"). Click "Account Settings".
    * Update `/etc/PrintToBox/PrintToBox.conf` with the following fields:
      * `Enterprise ID` &mdash; "enterpriseId" 
-   * Then, click the "App" tab and click "Authorize New App"
+   * Then, click the "App" tab and click "Authorize New App". N.b., if you do not see the text for "Authorize New App", then you need to input a support ticket with Box.com and ask them to enable AppAuth/AppUsers for your enterprise
    * Copy the `client_id` from above into the "API Key" field and click "Okay"
 5. Generate an AppUser and update `/etc/PrintToBox/PrintToBox.conf` with the "appUserId"
 
