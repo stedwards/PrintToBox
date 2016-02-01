@@ -31,7 +31,7 @@ do not exist. By default, it uploads a new version for existing files.
         cli.C(longOpt:'create-user', args: 1, argName:'username', 'Create AppUser <username> and exit')
         cli.d(longOpt:'differ', 'Upload new version only if the file differs')
         cli.D(longOpt:'debug', 'Enable debugging')
-        cli.E(longOpt:'erase-user', 'CAUTION: Erase configured AppUser and exit')
+        cli._(longOpt:'delete-user', 'CAUTION: Delete configured AppUser and exit')
         cli.f(longOpt:'folder', args: 1, argName:'folder', 'Box folder path. Top-level should be unique. Default: "PrintToBox <username>"')
         cli.h(longOpt:'help', 'Print this help text and exit')
         cli.I(longOpt:'user-info', 'Print information about the configured AppUser and exit')
@@ -64,7 +64,7 @@ do not exist. By default, it uploads a new version for existing files.
         }
 
         if (cmdLineOpts.C && cmdLineOpts.I || cmdLineOpts.C && cmdLineOpts.E || cmdLineOpts.E && cmdLineOpts.I) {
-            println 'Error: -C/--create-user, -E/--erase-user, and -I/--user-info are mutually exclusive options. See --help for details.'
+            println 'Error: -C/--create-user, --delete-user, and -I/--user-info are mutually exclusive options. See --help for details.'
             System.exit(1)
         }
 
@@ -102,7 +102,7 @@ do not exist. By default, it uploads a new version for existing files.
             }
         }
 
-        if (cmdLineOpts.E) {
+        if (cmdLineOpts.'delete-user') {
             try {
                 BoxHelper boxHelper = new BoxHelper()
                 boxHelper.deleteAppUser(configOpts)
@@ -114,7 +114,6 @@ do not exist. By default, it uploads a new version for existing files.
                 System.exit(1)
             }
         }
-
 
         if (cmdLineOpts.arguments().size() < 2) {
             cli.usage()
