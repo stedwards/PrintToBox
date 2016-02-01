@@ -7,5 +7,3 @@ set -e
 [ ! -z ${1+x} ] && [ "$1" = "2" ] || test "${1#*upgrade}" != "$1" && exit 0
 
 /usr/sbin/groupadd -r -f printtobox
-
-/bin/ln -sf /usr/lib/PrintToBox/bin/PrintToBox /usr/bin/PrintToBox

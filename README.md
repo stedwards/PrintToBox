@@ -6,10 +6,6 @@ Its initial inspiration was for [Banner](http://www.ellucian.com/student-informa
 print reports directly to Box in [INB](http://banner.wikia.com/wiki/Internet_Native_Banner). It should also work for 
 Banner XE, provided the printing interface for reports has not changed (i.e., not [CUPS](https://cups.org/)).
 
-It is based on standard enterprise user permissions. No admin/co-admin privileges are necessary.
-
-It is recommended that you create a service account in Box with developer access rather than using a human's account. 
-
 ## Usage
 ```
 PrintToBox [<options>] <username> <filename> [<filename 2>...]
@@ -19,20 +15,24 @@ the owner. Creates the collaborated folder and any subfolder[s] if they
 do not exist. By default, it uploads a new version for existing files.
 
 Options:
- -a,--auth-code <auth_code>   Auth code from OAUTH2 leg one
- -d,--differ                  Upload new version only if the file differs
- -f,--folder <folder>         Box folder path. Top-level should be unique.
-                              Default: "PrintToBox <username>"
- -h,--help                    Print this help text
- -R,--replace                 If the filename already exists in Box,
-                              delete it (and all versions) and replace it
-                              with this file
- -T,--total-size              Abort if total size of file set exceeds
-                              storage in Box. May not make sense with
-                              --replace, --differ, or --no-update
- -U,--no-update               If the filename already exists in Box, do
-                              nothing
- -V,--version                 Display the program version and exit
+ -C,--create-user <username>   Create AppUser <username> and exit
+ -d,--differ                   Upload new version only if the file differs
+ -D,--debug                    Enable debugging
+    --delete-user              CAUTION: Delete configured AppUser and exit
+ -f,--folder <folder>          Box folder path. Top-level should be
+                               unique. Default: "PrintToBox <username>"
+ -h,--help                     Print this help text and exit
+ -I,--user-info                Print information about the configured
+                               AppUser and exit
+ -R,--replace                  If the filename already exists in Box,
+                               delete it (and all versions) and replace it
+                               with this file
+ -T,--total-size               Abort if total size of file set exceeds
+                               storage in Box. May not make sense with
+                               --replace, --differ, or --no-update
+ -U,--no-update                If the filename already exists in Box, do
+                               nothing
+ -V,--version                  Display the program version and exit
 ```
 
 ## Building and Installing
@@ -45,27 +45,59 @@ Options:
    * RedHat/RPM distros: `sudo rpm -i build/distributions/printtobox-VERSION.rpm`
    * Ubuntu/DEB distros: `sudo dpkg -i build/distributions/printtobox_VERSION.deb`
 5. `sudo usermod -a -G printtobox <username>`
- * N.b., **anyone in this group can read the config file and alter the tokens file**. This is why it is a good idea to
- abstract access via CUPS. Making the executable setuid=root is *not* recommended.
+   * N.b., **anyone in this group can read the config file, keys, and key password**. This is why it is a good idea to
+ abstract access via CUPS or cron. Making the executable setuid=root is *not* recommended.
  
 ## Setting up configuration with Box.com
-1. Create a service account with developer access
-2. Log into the service account in Box.com
+1. Generate a public/private keypair with a password on the private key. Recommended:
+
+        openssl genrsa -aes256 -out /etc/PrintToBox/PrintToBox_private_key.pem 8192
+        openssl rsa -pubout -in /etc/PrintToBox/PrintToBox_private_key.pem -out /etc/PrintToBox/PrintToBox_public_key.pem
+        chmod 640 /etc/PrintToBox/PrintToBox_private_key.pem /etc/PrintToBox/PrintToBox_public_key.pem
+        chown root:printtobox /etc/PrintToBox/PrintToBox_private_key.pem /etc/PrintToBox/PrintToBox_public_key.pem
+
+2. Log into Box.com with an account with developer access
+   * Sign up to be a developer here: https://developers.box.com
+   * Then, go to your account settings (https://EXAMPLE.app.box.com/settings/security) and enable two-factor authentication unless you are using single sign-on (two-factor or SSO are mandatory for the steps below)
 3. Create a new application
- * The only checkbox under `Scopes` it needs is "Read and write all files and folders"
- * For `redirect_uri`, set it to a bogus URL
-4. Copy `client_id` and `client_secret` into the appropriate variables in `/etc/PrintToBox.conf`
-5. Edit this URL, setting `CLIENT_ID` appropriately, and go to it in a Web browser 
-`https://app.box.com/api/oauth2/authorize?response_type=code&client_id=CLIENT_ID`
-6. You'll be redirected to your bogus URL. Copy the value for the `code` parameter in the URL bar
-7. You have about 10 seconds to execute this:
-```
-/usr/bin/PrintToBox -a <code> <username> <filename>
-```
- * Assuming permissions and everything are correct, it will generate `/var/cache/PrintToBox/tokens` and upload the file
- to the supplied user
- * If you're too slow, do steps 5-7 again
- 
+   * Go here: https://EXAMPLE.app.box.com/developers/services/edit/
+   * Name it something unique. Select "Box Content" and press "Create Application"
+   * For `redirect_uri`, set it to a bogus **https** URL
+   * `User Type` is "App Users"
+   * Check these `Scopes`:
+     * Read and write all files and folders
+     * Create and manage app users
+   * Click "Save Application"
+   * Click "Add Public Key"
+   * Copy the contents of `/etc/PrintToBox/PrintToBox_public_key.pem` into the "Public Key" field
+   * Click "Verify" and then click "Save"
+   * Click "Save Application"
+   * Update `/etc/PrintToBox/PrintToBox.conf` with the following fields:
+     * Enterprise domain (@example.com) &mdash; "enterpriseDomain"
+     * `Key Id` &mdash; "keyId"
+     * Private key filename &mdash; "keyFileName"
+     * Private key password &mdash; "keyPassword"
+     * `client_id` &mdash; "clientId"
+     * `client_secret` &mdash; "clientSecret"
+4. Go to the Admin Console
+   * Go here: https://EXAMPLE.app.box.com/master/settings
+   * Click "Enterprise Settings" (or "Business Settings"). Click "Account Settings".
+   * Update `/etc/PrintToBox/PrintToBox.conf` with the following fields:
+     * `Enterprise ID` &mdash; "enterpriseId" 
+   * Then, click the "App" tab and click "Authorize New App". N.b., if you do not see the text for "Authorize New App", then you need to input a support ticket with Box.com and ask them to enable AppAuth/AppUsers for your enterprise
+   * Copy the `client_id` from above into the "API Key" field and click "Okay"
+5. Generate an AppUser and update `/etc/PrintToBox/PrintToBox.conf` with the "appUserId"
+
+        $ PrintToBox -C <APP_USERNAME>
+        Created user. Add this to /etc/PrintToBox/PrintToBox.conf:
+        "appUserId": "9999999999" 
+
+6. Try out a test upload
+
+        PrintToBox <MY USERNAME> <TEST FILENAME>
+
+7. Check the `PrintToBox <MY USERNAME>` folder for your uploaded file
+
 ## Tea4CUPS
 1. Install Tea4CUPS using your distribution package manager or get it here: [Tea4CUPS](http://www.pykota.com/software/tea4cups)
 2. Add a printer. E.g., `sudo lpadmin -p 'BOXPRINTER' -E -v 'tea4cups://'`
