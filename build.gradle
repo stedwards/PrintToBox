@@ -5,7 +5,7 @@ plugins {
 apply plugin: 'groovy'
 apply plugin: 'application'
 apply plugin: 'nebula.ospackage'
-version = '2.0'
+version = '2.1'
 mainClassName='PrintToBox'
 
 repositories {
@@ -29,6 +29,7 @@ ospackage  {
     release = '1'
     os = 'LINUX'
     packageName = 'printtobox'
+    packageGroup = 'Utilities'
     summary = 'Upload files for enterprise users to collaborated folders in Box.com'
     packager = 'Stephen Olander-Waters <stephenw@stedwards.edu>'
     maintainer = 'Stephen Olander-Waters <stephenw@stedwards.edu>'
