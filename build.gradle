@@ -33,6 +33,7 @@ ospackage  {
     summary = 'Upload files for enterprise users to collaborated folders in Box.com'
     packager = 'Stephen Olander-Waters <stephenw@stedwards.edu>'
     maintainer = 'Stephen Olander-Waters <stephenw@stedwards.edu>'
+    vendor = 'SEU'
     url = 'https://github.com/StEdwardsTeam/PrintToBox'
     license = 'MIT'
     user = 'root'
