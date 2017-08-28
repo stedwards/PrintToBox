@@ -3,7 +3,7 @@ import com.box.sdk.BoxUser
 import org.codehaus.groovy.GroovyException
 
 final class PrintToBox {
-    private static final String VERSION = '2.1'
+    private static final String VERSION = '2.2'
     private static final String CONFIG_FILE = '/etc/PrintToBox/PrintToBox.conf'
 
     static void main(String[] args) {
