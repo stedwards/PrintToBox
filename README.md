@@ -3,8 +3,7 @@ PrintToBox is an application for uploading files for enterprise users to collabo
 [Box](https://www.box.com). E.g., cron output, logfiles, backups, etc.
 
 Its initial inspiration was for [Banner](http://www.ellucian.com/student-information-system/) users to be able to 
-print reports directly to Box in [INB](http://banner.wikia.com/wiki/Internet_Native_Banner). It should also work for 
-Banner XE, provided the printing interface for reports has not changed (i.e., not [CUPS](https://cups.org/)).
+print reports directly to Box. It works with both Banner 8 and Banner 9.
 
 ## Usage
 ```
