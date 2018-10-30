@@ -43,6 +43,7 @@ Options:
 4. Install the package
    * RedHat/RPM distros: `sudo rpm -i build/distributions/printtobox-VERSION.rpm`
    * Ubuntu/DEB distros: `sudo dpkg -i build/distributions/printtobox_VERSION.deb`
+ for updating, use `-U` instead of `-i`
 5. `sudo usermod -a -G printtobox <username>`
    * N.b., **anyone in this group can read the config file, keys, and key password**. This is why it is a good idea to
  abstract access via CUPS or cron. Making the executable setuid=root is *not* recommended.
